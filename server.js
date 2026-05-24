@@ -1,5 +1,4 @@
 /**
- * 
  * NOTE: THIS IS A SAMPLE SERVER, repalce with a working backend later
 */
 
@@ -26,6 +25,7 @@ const db = mysql.createPool({
   database: 'enchain' //Depends on the name used (change later)
 });
 
+// test if DB works
 async function testDB() {
     try {
         const [rows] = await db.query("SELECT 1");
@@ -36,49 +36,52 @@ async function testDB() {
 }
 testDB();
 
-/**
-	//sample
-	const sample = [
-		{name: "Sample1", description: "This is a sample product", category: "Category1", discount: 20, productId: "1", stock: 25, image: "/img/home-image.png", price: 25.00}, 
-		{name: "Sample2", description: "This is another sample product", category: "Category2", discount: 0, productId: "2", stock: 15, image: "/img/home-image.png", price: 15.50},
-		{name: "Sample3", description: "This is yet another sample product", category: "Category3", discount: 10, productId: "3", stock: 30, image: "/img/home-image.png", price: 25.25},
-		{name: "Sample4", description: "This is  sample product, yet another", category: "Category2", discount: 15, productId: "4", stock: 20, image: "/img/home-image.png", price: 20.00},
-		{name: "Sample5", description: "This is a fifth sample product", category: "Category1", discount: 25, productId: "5", stock: 10, image: "/img/home-image.png", price: 10.75},
-		{name: "Sample6", description: "This is a sixth sample product", category: "Category3", discount: 0, productId: "6", stock: 35, image: "/img/home-image.png", price: 45.00},
-		{name: "Sample7", description: "This is a seventh sample product", category: "Category1", discount: 5, productId: "7", stock: 20, image: "/img/home-image.png", price: 35.50},
-		{name: "Sample8", description: "This is an eighth sample product", category: "Category2", discount: 30, productId: "8", stock: 15, image: "/img/home-image.png", price: 30.05},
-		{name: "Sample9", description: "This is a ninth sample product", category: "Category3", discount: 0, productId: "9", stock: 25, image: "/img/home-image.png", price: 19.95},
-		{name: "Sample10", description: "This is a tenth sample product", category: "Category1", discount: 10, productId: "10", stock: 30, image: "/img/home-image.png", price: 5.00}
-	];
+// signup customer
+app.post("/signup", async (req, res) => {
+    const { username, phonenumber, password } = req.body;
+    console.log(req.body);
 
-	let cart_sample = {
-		"12345": [{product: sample[0], quantity: 2}]
-	};
+    try {
+        const hashedPassword = await encrypt.hash(password, 10);
 
-	let orders = {
-		"12345": [
-			{
-				id: "ORD001",
-				date: "2026-05-03",
-				status: "shipped",
-				shipping: 5,
-				items: [{product: sample[2], quantity: 3}],
-			},
-			{
-				id: "ORD002",
-				date: "2026-04-28",
-				status: "delivered",
-				shipping: 0,
-				items: [{product: sample[4], quantity: 2}, {product: sample[6], quantity: 1}],
-			}
-		]
-	}
+        const [result] = await db.query(
+            `INSERT INTO customer (customer_name, customer_number, customer_passkey) VALUES (?, ?, ?)`,
+            [username, phonenumber, hashedPassword]
+        );
 
-	Notes:
-	Added attribute to product: producct_image, product_description and product_discount
-	Carts are records in orders and order_items with status cart/pending
-	In adding Order, turn cart into order by changing status to pending and updating stock of products. Add order date as well.
-*/
+        res.status(201).json({
+            success: true,
+            message: "User created successfully"
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to create user" });
+    }
+});
+
+// signup but for employees instead, can be found on employee management
+app.post("/signup/employee", async (req, res) => {
+    const { username, phoneNumber, password } = req.body;
+
+    try {
+        const hashedPassword = await encrypt.hash(password, 10);
+
+        const [result] = await db.query(
+            `INSERT INTO employee (employee_name, employee_number, employee_passkey) VALUES (?, ?, ?)`,
+            [username, phoneNumber, hashedPassword]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: "Employee created successfully"
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to create employee" });
+    }
+});
+
+// login for anyone and correctly redirect based on role
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
@@ -87,28 +90,28 @@ app.post("/login", async (req, res) => {
             return res.status(400).json({ message: "Missing username or password" });
         }
 
-        if (username === "admin" && password === "admin") {
-            return res.json({
-                success: true,
-                message: "Login successful",
-                userId: "99999999",
-                name: "Admin"
-            });
-        }
+        const [rows] = await db.query(
+            `SELECT customer_id as id, customer_name as name, customer_passkey as passkey, 'customer' as role
+            FROM customer
+            WHERE customer_name = ?
 
-        const [[user]] = await db.query(
-            `SELECT * FROM customer WHERE customer_name = ?`,
-            [username]
+            UNION
+
+            SELECT employee_id as id, employee_name as name, employee_passkey as passkey, 'employee' as role
+            FROM employee
+            WHERE employee_name = ?`,
+            [username, username]
         );
+
+        const user = rows[0];
 
         if (!user) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        // match password with hashed password in database using bcrypt
         const match = await encrypt.compare(
             password,
-            user.customer_passkey
+            user.passkey
         );
 
         if (!match) {
@@ -118,8 +121,9 @@ app.post("/login", async (req, res) => {
         res.json({
             success: true,
             message: "Login successful",
-            userId: user.customer_id,
-            name: user.customer_name
+            userId: user.id,
+            name: user.name,
+            role: user.role
         });
 
     } catch (err) {
@@ -128,11 +132,25 @@ app.post("/login", async (req, res) => {
     }
 });
 
+// checks if the user (customer or employee) already exists and return user data
 app.get("/user/:userId", async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const [user] = await db.query(`SELECT * FROM customer WHERE customer_id = ?`, [userId]);
+        const [rows] = await db.query(
+            `SELECT customer_id as id, customer_name as name, customer_passkey as passkey, 'customer' as role
+            FROM customer
+            WHERE customer_id = ?
+
+            UNION
+
+            SELECT employee_id as id, employee_name as name, employee_passkey as passkey, 'employee' as role
+            FROM employee
+            WHERE employee_id = ?`,
+            [userId, userId]
+        );
+
+        const user = rows[0];
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -144,6 +162,8 @@ app.get("/user/:userId", async (req, res) => {
         res.status(500).json({ message: "Failed to fetch user" });
     }
 });
+
+
 
 // check if a product exists in the database via productID
 async function productExists(productId) {
@@ -195,6 +215,7 @@ async function updateProductStock(productId, quantity) {
 		console.error(err);
 	}
 }
+
 
 
 // get products
@@ -260,6 +281,7 @@ app.get("/products/categories", async (req, res) => {
         res.status(500).json({ message: "Failed to fetch categories" });
     }
 });
+
 
 
 // get cart for a user

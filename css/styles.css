@@ -49,6 +49,7 @@
 }
 
 
+
 .profile {
   display: inline-flex;
   align-items: center;
@@ -71,12 +72,6 @@
   text-align: center;
   letter-spacing: 0;
   line-height: normal;
-}
-
-.down {
-  position: relative;
-  width: 8px;
-  height: 8px;
 }
 
 .header-dropdown-menu {
@@ -118,16 +113,6 @@
 .profile {
   cursor: pointer;
 }
-
-.vector-6 {
-  position: absolute;
-  width: 86.24%;
-  height: 75.00%;
-  top: 25.00%;
-  left: 13.76%;
-}
-
-
 
 
 
