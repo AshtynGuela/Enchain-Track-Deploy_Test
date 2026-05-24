@@ -11,7 +11,7 @@
 <body>
     <div class="dashboard">
         <header class="dashboard-header">
-            <div class="header-logo">Enchain Track</div>
+            <div class="header-logo">EnchainTrack</div>
             <div class="header-actions">
                 <div class="profile">
                     <div class="profile-name"></div>
@@ -54,10 +54,24 @@
                 <div class="title-line">
                     <div class="dashboard-title">Supplier Product Report</div>
                 </div>
+                <div class="cart-table-wrapper">
+                    <table class="product-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Supplier</th>
+                                <th>Contact</th>
+                                <th class="text-center">Goods</th>
+                                <th class="text-center">Products</th>
+                            </tr>
+                        </thead>
+                        <tbody id="suppliersBody"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
-    <script src="/dashboard.js" defer></script>
+    <script src="/dashboard.js?v=1" defer></script>
     <script src="/global.js" defer></script>
 </body>
 

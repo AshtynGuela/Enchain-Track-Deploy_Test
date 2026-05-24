@@ -2,6 +2,7 @@ const API_BASE_URL = "http://localhost:3000";
 let CURRENT_USER_ID = "00000003";
 
 
+
 function clearUserSession() {
 	localStorage.removeItem("userId");
 	localStorage.removeItem("username");

@@ -62,14 +62,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			if (result.success) {
 				if (result.role === "employee") {
+					localStorage.setItem("userId", result.userId);
+					localStorage.setItem("username", result.name);
 					window.location.href = "/dashboard/home.html";
-					localStorage.setItem("userId", result.userId);
-					localStorage.setItem("username", result.name);
 				}
-				else {
-					window.location.href = "/store/home.html";
+				else {					
 					localStorage.setItem("userId", result.userId);
 					localStorage.setItem("username", result.name);
+					window.location.href = "/store/home.html";
 				}
 			} else {
 				alert(result.message);

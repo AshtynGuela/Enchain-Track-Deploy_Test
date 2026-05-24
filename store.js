@@ -32,13 +32,17 @@ async function createDealCard(category, items=null, index=0) {
 			`;
 		}
 
-		const imageSource = product.product_image || '/img/home-image.png';
+		const hasImage = product.product_image && product.product_image !== '/img/home-image.png' && product.product_image.trim() !== '';
+		const imageSource = hasImage ? product.product_image : '/img/home-image.png';
+		const noImageClass = !hasImage ? 'no-image' : '';
+		const gradientContent = '';
+		
 		const priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
 
 		toAdd += 
 		`<div class="deal-card" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
-			<div class="deal-card-container" style="background-image: url('${imageSource}');">
-				<div class="deal-card-gradient"></div>
+			<div class="deal-card-container ${noImageClass}" style="background-image: url('${imageSource}');">
+				<div class="deal-card-gradient">${gradientContent}</div>
 			</div>
 			<div class="deal-card-details">
 				<div class="detail-sample1">${product.product_name}</div>
@@ -71,13 +75,17 @@ function createItemCard(products, category) {
 				<div class="item-discount-text">-${parseFloat(product.product_discount)}%</div>`;
 		}
 
-		const imageSource = product.product_image || '/img/home-image.png';
+		const hasImage = product.product_image && product.product_image !== '/img/home-image.png' && product.product_image.trim() !== '';
+		const imageSource = hasImage ? product.product_image : '/img/home-image.png';
+		const noImageClass = !hasImage ? 'no-image' : '';
+		const gradientContent = !hasImage ? '📷' : '';
+		
 		const priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
 
 		toAdd += `
 		<div class="item-card" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
-			<div class="item-card-container" style="background-image: url('${imageSource}');">
-				<div class="item-card-gradient"></div>
+			<div class="item-card-container ${noImageClass}" style="background-image: url('${imageSource}');">
+				<div class="item-card-gradient">${gradientContent}</div>
 			</div>
 			${discountText}
 			<div class="item-card-details">
