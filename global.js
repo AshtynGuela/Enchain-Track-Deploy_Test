@@ -2,6 +2,7 @@ const API_BASE_URL = "http://localhost:3000";
 let CURRENT_USER_ID = "00000003";
 
 
+
 function clearUserSession() {
 	localStorage.removeItem("userId");
 	localStorage.removeItem("username");
@@ -221,7 +222,7 @@ async function quickBuy(productId, quantity, gcashref=null) {
 			})
 		});
 		
-		return await quickOrder.json();
+		return await quickCart.json();
 	} catch (err) {
 		console.error('Error creating order:', err);
 	}

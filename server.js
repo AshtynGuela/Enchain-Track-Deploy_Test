@@ -374,14 +374,9 @@ app.post("/cart/:userId/:productId/:quantity", async (req, res) => {
         // If no row updated -> insert new item
         if (updateResult.affectedRows === 0) {
             await db.query(
-                `INSERT INTO order_item (order_id, product_id, item_quantity, item_price)
-                 VALUES (
-                    ?,
-                    ?,
-                    ?,
-                    (SELECT product_price FROM product WHERE product_id = ?)
-                 )`,
-                [orderId, productId, quantity || 1, productId]
+                `INSERT INTO order_item (order_id, product_id, item_quantity)
+                 VALUES (?, ?, ?)`,
+                [orderId, productId, quantity || 1]
             );
         }
 
@@ -660,15 +655,15 @@ app.post("/quickbuy", async (req, res) => {
         `, [userId, gcashref ? 'g' : 'c']);
 
         await db.query(`
-            INSERT INTO order_item (order_id, product_id, item_quantity, item_price)
-            VALUES (?, ?, ?, (SELECT product_price FROM product WHERE product_id = ?))
-        `, [order.order_id, productId, quantity, productId]);
+           INSERT INTO order_item (order_id, product_id, item_quantity)
+            VALUES (?, ?, ?)
+        `, [order.order_id, productId, quantity]);
 
         if (gcashref) {
             await db.query(`
                 UPDATE orders
                 SET transaction_date = NOW(),
-                    transaction_total = (SELECT SUM(item_quantity * item_price) FROM order_item WHERE order_id = ?)
+                    transaction_total = (SELECT SUM(oi.item_quantity * p.product_price) FROM order_item oi JOIN product p ON oi.product_id = p.product_id WHERE oi.order_id = ?)
                 WHERE order_id = ?
             `, [order.order_id, order.order_id]);
 
@@ -678,7 +673,7 @@ app.post("/quickbuy", async (req, res) => {
 
             await db.query(`
                 UPDATE orders
-                SET transaction_total = (SELECT SUM(item_quantity * item_price) FROM order_item WHERE order_id = ?)
+                 SET transaction_total = (SELECT SUM(oi.item_quantity * p.product_price) FROM order_item oi JOIN product p ON oi.product_id = p.product_id WHERE oi.order_id = ?)
                 WHERE order_id = ?
             `, [order.order_id, order.order_id]);
             }
@@ -699,10 +694,208 @@ app.post("/quickbuy", async (req, res) => {
 
 
 
+// admin dashboard summary
+app.get("/admin/dashboard/summary", async (req, res) => {
+  try {
+    const [[summary]] = await db.query(`
+      SELECT
+        COALESCE(SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)), 0) AS revenue,
+        COUNT(DISTINCT o.order_id) AS sales,
+        COALESCE(SUM(oi.item_quantity), 0) AS items_sold
+      FROM orders o
+      JOIN order_item oi ON o.order_id = oi.order_id
+      JOIN product p ON p.product_id = oi.product_id
+      WHERE o.order_status <> 'cart'
+    `);
+
+    const [[customers]] = await db.query(`SELECT COUNT(*) AS customers FROM customer`);
+    const [[lowStock]] = await db.query(`SELECT COUNT(*) AS low_stock FROM product WHERE product_stock <= 5`);
+
+    res.json({
+      revenue: summary.revenue,
+      sales: summary.sales,
+      items_sold: summary.items_sold,
+      customers: customers.customers,
+      low_stock: lowStock.low_stock
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch dashboard summary" });
+  }
+});
+
+app.get("/admin/dashboard/stock-alerts", async (req, res) => {
+  const threshold = Number(req.query.threshold) || 5;
+  try {
+    const [rows] = await db.query(`
+      SELECT p.product_id, p.product_name, p.product_stock, p.product_type, s.supplier_name
+      FROM product p
+      LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
+      WHERE p.product_stock <= ?
+      ORDER BY p.product_stock ASC, p.product_name
+    `, [threshold]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch stock alerts" });
+  }
+});
+
+app.get("/admin/dashboard/top-products", async (req, res) => {
+  const limit = Number(req.query.limit) || 5;
+  try {
+    const [rows] = await db.query(`
+      SELECT p.product_id, p.product_name,
+             SUM(oi.item_quantity) AS units,
+             SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)) AS revenue
+      FROM orders o
+      JOIN order_item oi ON o.order_id = oi.order_id
+      JOIN product p ON p.product_id = oi.product_id
+      WHERE o.order_status <> 'cart'
+      GROUP BY p.product_id
+      ORDER BY units DESC
+      LIMIT ?
+    `, [limit]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch top products" });
+  }
+});
+
+// inventory report
+app.get("/admin/inventory", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+            SELECT g.goods_id, g.item_name, g.item_stock, g.item_price, s.supplier_name
+            FROM goods g
+            LEFT JOIN supplier s ON s.supplier_id = g.supplier_id
+            ORDER BY g.item_stock ASC, g.item_name
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch inventory" });
+  }
+});
+
+// product report
+app.get("/admin/products", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT p.product_id, p.product_name, p.product_type, p.product_price, p.product_discount, p.product_stock, s.supplier_name
+      FROM product p
+      LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
+      ORDER BY p.product_name
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch products" });
+  }
+});
+
+// sales report
+app.get("/admin/sales", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
+             SUM(oi.item_quantity) AS items,
+             SUM(oi.item_quantity * p.product_price) AS gross,
+             SUM(oi.item_quantity * p.product_price * (p.product_discount / 100)) AS discount,
+             SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)) AS total
+      FROM orders o
+      JOIN order_item oi ON o.order_id = oi.order_id
+      JOIN product p ON p.product_id = oi.product_id
+      LEFT JOIN customer c ON c.customer_id = o.customer_id
+      WHERE o.order_status <> 'cart'
+      GROUP BY o.order_id
+      ORDER BY o.order_date DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch sales" });
+  }
+});
+
+// orders report
+app.get("/admin/orders", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
+             SUM(oi.item_quantity) AS items
+      FROM orders o
+      JOIN order_item oi ON o.order_id = oi.order_id
+      LEFT JOIN customer c ON c.customer_id = o.customer_id
+      WHERE o.order_status <> 'cart'
+      GROUP BY o.order_id
+      ORDER BY o.order_date DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch orders" });
+  }
+});
+
+app.put("/admin/orders/:orderId/status", async (req, res) => {
+    const { orderId } = req.params;
+    const { status } = req.body || {};
+    const allowed = new Set(["pending", "processing", "completed"]);
+
+    if (!orderId || !status) {
+        return res.status(400).json({ message: "Missing orderId or status" });
+    }
+
+    const normalized = String(status).toLowerCase();
+    if (!allowed.has(normalized)) {
+        return res.status(400).json({ message: "Invalid status" });
+    }
+
+    try {
+        const [result] = await db.query(
+            `UPDATE orders SET order_status = ? WHERE order_id = ? AND order_status <> 'cart'`,
+            [normalized, orderId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        res.json({ message: "Status updated" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to update status" });
+    }
+});
+
+// supplier report
+app.get("/admin/suppliers", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT s.supplier_id, s.supplier_name, s.supplier_number,
+             COUNT(DISTINCT g.goods_id) AS goods_count,
+             COUNT(DISTINCT p.product_id) AS product_count
+      FROM supplier s
+      LEFT JOIN goods g ON g.supplier_id = s.supplier_id
+      LEFT JOIN product p ON p.supplier_id = s.supplier_id
+      GROUP BY s.supplier_id
+      ORDER BY s.supplier_name
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch suppliers" });
+  }
+});
+
 app.get('/', async (req, res) => {
-  res.sendFile(path.join(__dirname, 'store', 'home.html'));
+    res.sendFile(path.join(__dirname, 'store', 'home.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running at http://localhost:${PORT}`);
 });

@@ -11,7 +11,7 @@
 <body>
     <div class="dashboard">
         <header class="dashboard-header">
-            <div class="header-logo">Enchain Track</div>
+            <div class="header-logo">EnchainTrack</div>
             <div class="header-actions">
                 <div class="profile">
                     <div class="profile-name"></div>
@@ -58,22 +58,22 @@
                 <div class="dashboard-summary">
                     <div class="dashboard-data-card">
                         <div class="data-card-title">Revenue</div>
-                        <div class="data-card-data"></div>
+                        <div class="data-card-data" id="dashboardRevenue"></div>
                     </div>
 
                     <div class="dashboard-data-card">
                         <div class="data-card-title">Sales</div>
-                        <div class="data-card-data"></div>
+                        <div class="data-card-data" id="dashboardSales"></div>
                     </div>
 
                     <div class="dashboard-data-card">
                         <div class="data-card-title">Purchases</div>
-                        <div class="data-card-data"></div>
+                        <div class="data-card-data" id="dashboardItems"></div>
                     </div>
 
                     <div class="dashboard-data-card">
-                        <div class="data-card-title">Purchases</div>
-                        <div class="data-card-data"></div>
+                        <div class="data-card-title">Customers</div>
+                        <div class="data-card-data" id="dashboardCustomers"></div>
                     </div>
                 </div>
 
@@ -82,35 +82,18 @@
                         <div class="title-line">
                             <div class="table-title">Stock Alert</div>
                         </div>
-
-                        <div class="row-title-group">
-                            <div class="row-title">order ID</div>
-                            <div class="row-title">Date</div>
-                            <div class="row-title">Quantity</div>
-                            <div class="row-title">Alert amt.</div>
-                            <div class="row-title">Status</div>
-                        </div>
-
-                        <div class="row-data-group">
-                            <div class="row-data">order ID</div>
-                            <div class="row-data">Date</div>
-                            <div class="row-data">Quantity</div>
-                            <div class="row-data">Alert amt.</div>
-                            <div class="row-data">Status</div>
-                        </div>
-                        <div class="row-data-group">
-                            <div class="row-data">order ID</div>
-                            <div class="row-data">Date</div>
-                            <div class="row-data">Quantity</div>
-                            <div class="row-data">Alert amt.</div>
-                            <div class="row-data">Status</div>
-                        </div>
-                        <div class="row-data-group">
-                            <div class="row-data">order ID</div>
-                            <div class="row-data">Date</div>
-                            <div class="row-data">Quantity</div>
-                            <div class="row-data">Alert amt.</div>
-                            <div class="row-data">Status</div>
+                        <div class="cart-table-wrapper">
+                            <table class="product-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Type</th>
+                                        <th class="text-center">Stock</th>
+                                        <th>Supplier</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stockAlertsBody"></tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -118,34 +101,24 @@
                         <div class="title-line">
                             <div class="table-title">Top Selling Products</div>
                         </div>
-
-                        <div class="row-title-group">
-                            <div class="row-title">order ID</div>
-                            <div class="row-title">Quantity</div>
-                            <div class="row-title">Alert amt.</div>
-                        </div>
-
-                        <div class="row-data-group">
-                            <div class="row-data">order ID</div>
-                            <div class="row-data">Quantity</div>
-                            <div class="row-data">Alert amt.</div>
-                        </div>
-                        <div class="row-data-group">
-                            <div class="row-data">order ID</div>
-                            <div class="row-data">Quantity</div>
-                            <div class="row-data">Alert amt.</div>
-                        </div>
-                        <div class="row-data-group">
-                            <div class="row-data">order ID</div>
-                            <div class="row-data">Quantity</div>
-                            <div class="row-data">Alert amt.</div>
+                        <div class="cart-table-wrapper">
+                            <table class="product-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th class="text-center">Units</th>
+                                        <th class="text-right">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topProductsBody"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-    <script src="/dashboard.js" defer></script>
+    <script src="/dashboard.js?v=1" defer></script>
     <script src="/global.js" defer></script>
 </body>
 

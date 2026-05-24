@@ -11,7 +11,9 @@
 <body>
     <div class="dashboard">
         <header class="dashboard-header">
-            <div class="header-logo">Enchain Track</div>
+            <div class="header-logo">Enchain
+                
+                Track</div>
             <div class="header-actions">
                 <div class="profile">
                     <div class="profile-name"></div>
@@ -47,17 +49,33 @@
                         <div class="nav-title">Supplier</div>
                     </button>
                 </div>
-                <div class="navigation-indicator" style="top: 155px;"></div> <!--Adjust top to: 25px + 65*(order of link - 1)-->
+                <div class="navigation-indicator" style="top: 155px;"></div>
             </div>
 
             <div class="dashboard-main-data">
                 <div class="title-line">
                     <div class="dashboard-title">Products</div>
                 </div>
+                <div class="cart-table-wrapper">
+                    <table class="product-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Product</th>
+                                <th>Type</th>
+                                <th class="text-center">Stock</th>
+                                <th class="text-right">Price</th>
+                                <th class="text-center">Discount</th>
+                                <th>Supplier</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsBody"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
-    <script src="/dashboard.js" defer></script>
+    <script src="/dashboard.js?v=1" defer></script>
     <script src="/global.js" defer></script>
 </body>
 
