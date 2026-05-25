@@ -316,6 +316,69 @@ line-height: normal;
 	box-shadow: 2px 4px 19px #00244540;
 }
 
+/* Stock level badge pills */
+.stock-pill {
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	min-width: 80px;
+	padding: 5px 12px;
+	border-radius: 999px;
+	font-family: "Poppins-Medium", Helvetica;
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.stock-pill.stock-out {
+	background-color: #fde8e8;
+	color: #b91c1c;
+}
+
+.stock-pill.stock-critical {
+	background-color: #fff0e0;
+	color: #c2410c;
+}
+
+.stock-pill.stock-low {
+	background-color: #fefce8;
+	color: #92400e;
+}
+
+/* Count badge next to the Stock Alert title */
+.stock-alert-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 24px;
+	height: 24px;
+	padding: 0 7px;
+	border-radius: 999px;
+	font-family: "Poppins-Bold", Helvetica;
+	font-size: 13px;
+	margin-left: 8px;
+	vertical-align: middle;
+}
+
+.stock-alert-count.stock-count-warn {
+	background-color: #fde8e8;
+	color: #b91c1c;
+}
+
+.stock-alert-count.stock-count-ok {
+	background-color: #dcfce7;
+	color: #15803d;
+}
+
+/* Empty state for stock alert table */
+.stock-alerts-empty {
+	text-align: center;
+	padding: 28px 0;
+	font-family: "Poppins-Regular", Helvetica;
+	font-size: 14px;
+	color: #15803d;
+}
+
 .title-line {
 	display: flex;
 	align-items: center;
@@ -416,6 +479,24 @@ line-height: normal;
 	border-radius: 10px;
 	border: 1px solid;
 	border-color: #cacaca;
+	box-shadow: 2px 4px 19px #00244540;
+}
+
+/* Unified table card — used on all full-page dashboard tables */
+.dashboard-table-card {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: fit-content;
+	align-items: center;
+	justify-content: center;
+	padding: 10px;
+	gap: 10px;
+	position: relative;
+	align-self: stretch;
+	background-color: #ffffff;
+	border-radius: 10px;
+	border: 1px solid #cacaca;
 	box-shadow: 2px 4px 19px #00244540;
 }
 
@@ -805,7 +886,6 @@ line-height: normal;
 .cart-table-wrapper {
 	width: 100%;
 	overflow-x: auto;
-	margin-top: 20px;
 }
 
 .product-table {
@@ -829,6 +909,21 @@ line-height: normal;
 	font-size: 14px;
 	text-transform: uppercase;
 	letter-spacing: 0.02em;
+}
+
+.product-table tbody tr {
+	transition: background-color 0.15s ease;
+}
+
+.product-table tbody tr:hover {
+	background-color: #f4f8ff;
+}
+
+.product-table tbody td {
+	font-family: "Poppins-Regular", Helvetica;
+	font-weight: 400;
+	color: #10153f;
+	font-size: 14px;
 }
 
 

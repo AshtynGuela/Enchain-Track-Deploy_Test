@@ -93,15 +93,32 @@ async function loadDashboardHome() {
   document.getElementById("dashboardItems").textContent = summary.items_sold;
   document.getElementById("dashboardCustomers").textContent = summary.customers;
 
-  const stockRows = await fetchJson("/admin/dashboard/stock-alerts");
-  document.getElementById("stockAlertsBody").innerHTML = stockRows.map(row => `
+  const STOCK_THRESHOLD = 5;
+
+  const stockRows = await fetchJson(`/admin/dashboard/stock-alerts?threshold=${STOCK_THRESHOLD}`);
+
+  // Update the Stock Alert title with a live count badge
+  const stockTitleEl = document.querySelector('.stock-alerts .table-title');
+  if (stockTitleEl) {
+    stockTitleEl.innerHTML = `Stock Alert <span class="stock-alert-count ${stockRows.length === 0 ? 'stock-count-ok' : 'stock-count-warn'}">${stockRows.length}</span>`;
+  }
+
+  function stockBadge(qty) {
+    if (qty === 0) return `<span class="stock-pill stock-out">Out of Stock</span>`;
+    if (qty <= 3)  return `<span class="stock-pill stock-critical">${qty}</span>`;
+    return             `<span class="stock-pill stock-low">${qty}</span>`;
+  }
+
+  document.getElementById("stockAlertsBody").innerHTML = stockRows.length
+    ? stockRows.map(row => `
     <tr>
       <td>${row.product_name}</td>
-      <td>${row.product_type || ""}</td>
-      <td class="text-center">${row.product_stock}</td>
-      <td>${row.supplier_name || ""}</td>
+      <td>${row.product_type || "—"}</td>
+      <td class="text-center">${stockBadge(row.product_stock)}</td>
+      <td>${row.supplier_name || "—"}</td>
     </tr>
-  `).join("");
+  `).join("")
+    : `<tr><td colspan="4" class="stock-alerts-empty">ALL PRODUCTS ARE CURRENTLY WELL-STOCKED.</td></tr>`;
 
   const topRows = await fetchJson("/admin/dashboard/top-products?limit=5");
   document.getElementById("topProductsBody").innerHTML = topRows.map(row => `
