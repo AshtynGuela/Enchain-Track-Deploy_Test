@@ -240,12 +240,13 @@ line-height: normal;
 .dashboard-data-card {
 	display: inline-flex;
 	flex-direction: column;
-	height: 80px;
+	height: 100px;
 	flex: 1 1 0;
 	min-width: 200px;
 	max-width: 250px;
+	gap: 15px;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: center;
 	padding: 12px 15px;
 	position: relative;
 	background-color: #ffffff;
@@ -259,7 +260,6 @@ line-height: normal;
 	align-items: center;
 	justify-content: center;
 	width: fit-content;
-	margin-top: -1px;
 	font-family: "Poppins-Regular", Helvetica;
 	font-weight: 400;
 	color: #000000;
@@ -274,7 +274,6 @@ line-height: normal;
 	justify-content: center;
 	width: 132px;
 	height: 34px;
-	margin-top: -1px;
 	font-family: "Poppins-Regular", Helvetica;
 	font-weight: 400;
 	color: #000000;
@@ -290,11 +289,12 @@ line-height: normal;
 .dashboard-table-group {
 	display: flex;
 	height: fit-content;
-	align-items: flex-start;
+	align-items: center;
 	gap: 35px;
 	position: relative;
 	width: 100%;
-	justify-content: stretch;
+	justify-content: center;
+	flex-direction: column;
 }
 
 /* Table for stock alerts */
@@ -302,7 +302,7 @@ line-height: normal;
 	display: flex;
 	flex-direction: column;
 	height: fit-content;
-	width: 700px;
+	width: 100%;
 	align-items: center;
 	justify-content: center;
 	padding: 10px;
@@ -403,7 +403,7 @@ line-height: normal;
 	display: flex;
 	flex-direction: column;
 	height: fit-content;
-	width: 400px;
+	width: 100%;
 	align-items: center;
 	justify-content: center;
 	padding: 10px;
@@ -860,14 +860,14 @@ line-height: normal;
 	color: #0d0fa1;
 }
 
-.status-pill.shipped {
+.status-pill.shipped, .status-pill.processing {
 	background-color: #e8f5e9;
 	color: #1b5e4e;
 }
 
-.status-pill.delivered {
+.status-pill.delivered, .status-pill.completed {
 	background-color: #f1f8e9;
-	color: #33691e;
+	color: #37aa0a;
 }
 
 .order-items-header, .order-detail-item {
