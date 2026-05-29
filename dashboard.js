@@ -30,6 +30,90 @@ async function fetchJson(path) {
   return res.json();
 }
 
+function parseNumberValue(value) {
+  const cleaned = String(value || "").replace(/[^0-9.-]/g, "");
+  const num = Number(cleaned);
+  return Number.isNaN(num) ? 0 : num;
+}
+
+function normalizeSortValue(value, type) {
+  switch (type) {
+    case "number":
+    case "currency":
+      return parseNumberValue(value);
+    case "date": {
+      const timestamp = Date.parse(value);
+      return Number.isNaN(timestamp) ? 0 : timestamp;
+    }
+    default:
+      return String(value || "").trim().toLowerCase();
+  }
+}
+
+function getCellSortValue(cell, type) {
+  if (!cell) return "";
+  const select = cell.querySelector("select");
+  const rawValue = select ? select.value : cell.textContent;
+  return normalizeSortValue(rawValue, type);
+}
+
+function setSortIndicator(table, activeHeader, direction) {
+  table.querySelectorAll("thead th.sortable").forEach((header) => {
+    if (header === activeHeader) {
+      header.dataset.sortDir = direction;
+    } else {
+      delete header.dataset.sortDir;
+    }
+  });
+}
+
+function sortTableRows(table, columnIndex, type, direction) {
+  const tbody = table.tBodies[0];
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  if (rows.length < 2) return;
+
+  const multiplier = direction === "desc" ? -1 : 1;
+  rows.sort((rowA, rowB) => {
+    const valueA = getCellSortValue(rowA.children[columnIndex], type);
+    const valueB = getCellSortValue(rowB.children[columnIndex], type);
+
+    if (typeof valueA === "number" && typeof valueB === "number") {
+      return (valueA - valueB) * multiplier;
+    }
+
+    return String(valueA).localeCompare(String(valueB)) * multiplier;
+  });
+
+  rows.forEach((row) => tbody.appendChild(row));
+}
+
+function initSortableTables() {
+  document.querySelectorAll(".product-table").forEach((table) => {
+    const headers = table.querySelectorAll("thead th");
+    headers.forEach((header, index) => {
+      const type = header.dataset.type;
+      if (!type || header.dataset.sortBound) return;
+
+      header.classList.add("sortable");
+      if (!header.querySelector(".sort-indicator")) {
+        const indicator = document.createElement("span");
+        indicator.className = "sort-indicator";
+        header.appendChild(indicator);
+      }
+
+      header.addEventListener("click", () => {
+        const direction = header.dataset.sortDir === "asc" ? "desc" : "asc";
+        setSortIndicator(table, header, direction);
+        sortTableRows(table, index, type, direction);
+      });
+
+      header.dataset.sortBound = "true";
+    });
+  });
+}
+
 function initAdminDropdownFallback() {
   const profile = document.querySelector('.header-actions .profile');
   if (!profile) return;
@@ -258,6 +342,7 @@ async function initDashboard() {
   }
 
   initAdminDropdownFallback();
+  initSortableTables();
 
   if (document.getElementById("dashboardRevenue")) {
   try { await loadDashboardHome(); } catch(e) { console.error('Dashboard load failed:', e); }

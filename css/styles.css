@@ -322,27 +322,28 @@ line-height: normal;
 	justify-content: center;
 	align-items: center;
 	min-width: 80px;
-	padding: 5px 12px;
-	border-radius: 999px;
+	padding: 6px 12px;
+	border-radius: 4px;
+	border: 0;
 	font-family: "Poppins-Medium", Helvetica;
 	font-size: 12px;
-	font-weight: 600;
+	font-weight: 700;
+	letter-spacing: 0.2px;
+	background-color: var(--badge-bg, #6b7280);
+	color: #ffffff;
 	white-space: nowrap;
 }
 
 .stock-pill.stock-out {
-	background-color: #fde8e8;
-	color: #b91c1c;
+	--badge-bg: #ef4444;
 }
 
 .stock-pill.stock-critical {
-	background-color: #fff0e0;
-	color: #c2410c;
+	--badge-bg: #f59e0b;
 }
 
 .stock-pill.stock-low {
-	background-color: #fefce8;
-	color: #92400e;
+	--badge-bg: #22c55e;
 }
 
 /* Count badge next to the Stock Alert title */
@@ -352,22 +353,23 @@ line-height: normal;
 	justify-content: center;
 	min-width: 24px;
 	height: 24px;
-	padding: 0 7px;
-	border-radius: 999px;
+	padding: 0 8px;
+	border-radius: 4px;
+	border: 0;
 	font-family: "Poppins-Bold", Helvetica;
-	font-size: 13px;
+	font-size: 12px;
 	margin-left: 8px;
 	vertical-align: middle;
+	background-color: #6b7280;
+	color: #ffffff;
 }
 
 .stock-alert-count.stock-count-warn {
-	background-color: #fde8e8;
-	color: #b91c1c;
+	background-color: #ef4444;
 }
 
 .stock-alert-count.stock-count-ok {
-	background-color: #dcfce7;
-	color: #15803d;
+	background-color: #22c55e;
 }
 
 /* Empty state for stock alert table */
@@ -909,6 +911,26 @@ line-height: normal;
 	font-size: 14px;
 	text-transform: uppercase;
 	letter-spacing: 0.02em;
+}
+
+.product-table thead th.sortable {
+	cursor: pointer;
+	user-select: none;
+}
+
+.product-table thead th.sortable .sort-indicator {
+	display: inline-flex;
+	margin-left: 6px;
+	font-size: 10px;
+	opacity: 0.55;
+}
+
+.product-table thead th.sortable[data-sort-dir="asc"] .sort-indicator::before {
+	content: "^";
+}
+
+.product-table thead th.sortable[data-sort-dir="desc"] .sort-indicator::before {
+	content: "v";
 }
 
 .product-table tbody tr {

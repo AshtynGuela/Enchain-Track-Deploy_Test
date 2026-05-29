@@ -454,9 +454,10 @@ app.put("/cart/:userId/:productId/:quantity", async (req, res) => {
         
 		let orderId = cartRows[0].order_id;
 
-		const [[product]] = await db.query(`SELECT product_stock FROM product WHERE product_id = ?`, [productId]);
 
-		if (quantity <= 0 || quantity > product.product_stock) { return res.status(400).json({ message: "Invalid quantity" });}
+        const [[product]] = await db.query(`SELECT product_stock FROM product WHERE product_id = ?`, [productId]);
+
+        if (quantity <= 0 || quantity > product.product_stock) { return res.status(400).json({ message: "Invalid quantity" });}
 
         let [updateResult] = await db.query(
             `UPDATE order_item
@@ -697,7 +698,7 @@ app.get("/admin/dashboard/summary", async (req, res) => {
     `);
 
     const [[customers]] = await db.query(`SELECT COUNT(*) AS customers FROM customer`);
-    const [[lowStock]] = await db.query(`SELECT COUNT(*) AS low_stock FROM product WHERE product_stock <= 5`);
+        const [[lowStock]] = await db.query(`SELECT COUNT(*) AS low_stock FROM product WHERE product_stock <= 5`);
 
     res.json({
       revenue: summary.revenue,
@@ -716,11 +717,11 @@ app.get("/admin/dashboard/stock-alerts", async (req, res) => {
   const threshold = Number(req.query.threshold) || 5;
   try {
     const [rows] = await db.query(`
-      SELECT p.product_id, p.product_name, p.product_stock, p.product_type, s.supplier_name
-      FROM product p
-      LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
-      WHERE p.product_stock <= ?
-      ORDER BY p.product_stock ASC, p.product_name
+            SELECT p.product_id, p.product_name, p.product_stock, p.product_type, s.supplier_name
+            FROM product p
+            LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
+            WHERE p.product_stock <= ?
+            ORDER BY p.product_stock ASC, p.product_name
     `, [threshold]);
 
     res.json(rows);
@@ -773,10 +774,10 @@ app.get("/admin/inventory", async (req, res) => {
 app.get("/admin/products", async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT p.product_id, p.product_name, p.product_type, p.product_price, p.product_discount, p.product_stock, s.supplier_name
-      FROM product p
-      LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
-      ORDER BY p.product_name
+            SELECT p.product_id, p.product_name, p.product_type, p.product_price, p.product_discount, p.product_stock, s.supplier_name
+            FROM product p
+            LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
+            ORDER BY p.product_name
     `);
     res.json(rows);
   } catch (err) {
