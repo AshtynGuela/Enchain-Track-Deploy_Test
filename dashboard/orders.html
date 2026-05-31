@@ -65,6 +65,7 @@
                                     <th data-type="number">Order</th>
                                     <th data-type="date">Date</th>
                                     <th data-type="text">Customer</th>
+                                    <th data-type="text">Products</th>
                                     <th class="text-center" data-type="number">Items</th>
                                     <th data-type="text">Status</th>
                                 </tr>
@@ -75,6 +76,29 @@
                 </div>
             </div>
         </main>
+    </div>
+    <!-- Admin order details modal -->
+    <div class="card-modal-overlay" hidden id="adminOrderDetailsOverlay">
+        <div class="card-modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" aria-label="Close details">&times;</button>
+            <div class="modal-details">
+                <h2 class="modal-title" id="adminOrderModalTitle">Order details</h2>
+                <p class="modal-subtitle" id="adminOrderModalStatus">Status:</p>
+                <p class="modal-description" id="adminOrderModalSummary">Order items and pricing appear below.</p>
+            </div>
+            <div class="order-items-header">
+                <span>Item</span>
+                <span class="text-center">Qty</span>
+                <span class="text-right">Line Total</span>
+            </div>
+            <div class="order-items-list" id="adminOrderItemsList"></div>
+            <div class="modal-actions order-detail-totals">
+                <div class="order-detail-row"><span>Subtotal</span><strong id="adminModalSubtotal">---</strong></div>
+                <div class="order-detail-row"><span>Discount</span><strong id="adminModalDiscount">---</strong></div>
+                <div class="order-detail-row"><span>Shipping</span><strong id="adminModalShipping">---</strong></div>
+                <div class="order-detail-row order-detail-total"><span>Total</span><strong id="adminModalTotal">---</strong></div>
+            </div>
+        </div>
     </div>
     <script src="/dashboard.js?v=1" defer></script>
     <script src="/global.js" defer></script>

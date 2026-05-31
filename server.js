@@ -789,12 +789,15 @@ app.get("/admin/products", async (req, res) => {
 // sales report
 app.get("/admin/sales", async (req, res) => {
   try {
+        // Aggregated list for admin view
     const [rows] = await db.query(`
       SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
-             SUM(oi.item_quantity) AS items,
-             SUM(oi.item_quantity * p.product_price) AS gross,
-             SUM(oi.item_quantity * p.product_price * (p.product_discount / 100)) AS discount,
-             SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)) AS total
+                         GROUP_CONCAT(CONCAT(p.product_name, ' x', oi.item_quantity)
+                             ORDER BY p.product_name SEPARATOR ' | ') AS product_list,
+                         SUM(oi.item_quantity) AS items,
+                         SUM(oi.item_quantity * p.product_price) AS gross,
+                         SUM(oi.item_quantity * p.product_price * (p.product_discount / 100)) AS discount,
+                         SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)) AS total
       FROM orders o
       JOIN order_item oi ON o.order_id = oi.order_id
       JOIN product p ON p.product_id = oi.product_id
@@ -806,18 +809,22 @@ app.get("/admin/sales", async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Failed to fetch sales" });
+    res.status(500).json({ message: "Failed to fetch sales." });
   }
 });
 
 // orders report
 app.get("/admin/orders", async (req, res) => {
   try {
+        // Include an aggregated product list for compact admin table previews.
     const [rows] = await db.query(`
       SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
-             SUM(oi.item_quantity) AS items
+                         GROUP_CONCAT(CONCAT(p.product_name, ' x', oi.item_quantity)
+                             ORDER BY p.product_name SEPARATOR ' | ') AS product_list,
+                         SUM(oi.item_quantity) AS items
       FROM orders o
       JOIN order_item oi ON o.order_id = oi.order_id
+            JOIN product p ON p.product_id = oi.product_id
       LEFT JOIN customer c ON c.customer_id = o.customer_id
       WHERE o.order_status <> 'cart'
       GROUP BY o.order_id
@@ -826,8 +833,40 @@ app.get("/admin/orders", async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Failed to fetch orders" });
+    res.status(500).json({ message: "Failed to fetch orders." });
   }
+});
+
+// order details for admin modal
+app.get("/admin/orders/:orderId/details", async (req, res) => {
+    const { orderId } = req.params;
+    if (!orderId) {
+        return res.status(400).json({ message: "Missing orderId" });
+    }
+
+    try {
+        const [rows] = await db.query(`
+            SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
+                         p.product_name, p.product_description, p.product_price, p.product_discount,
+                         oi.item_quantity
+            FROM orders o
+            JOIN order_item oi ON o.order_id = oi.order_id
+            JOIN product p ON p.product_id = oi.product_id
+            LEFT JOIN customer c ON c.customer_id = o.customer_id
+            WHERE o.order_id = ?
+            AND o.order_status <> 'cart'
+            ORDER BY p.product_name
+        `, [orderId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Order not found." });
+        }
+
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch order details." });
+    }
 });
 
 app.put("/admin/orders/:orderId/status", async (req, res) => {
@@ -851,13 +890,13 @@ app.put("/admin/orders/:orderId/status", async (req, res) => {
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "Order not found" });
+            return res.status(404).json({ message: "Order not found." });
         }
 
-        res.json({ message: "Status updated" });
+        res.json({ message: "Status updated." });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Failed to update status" });
+        res.status(500).json({ message: "Failed to update status." });
     }
 });
 
@@ -877,7 +916,7 @@ app.get("/admin/suppliers", async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Failed to fetch suppliers" });
+    res.status(500).json({ message: "Failed to fetch suppliers." });
   }
 });
 

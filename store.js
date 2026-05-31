@@ -485,12 +485,13 @@ else if (document.body.id === 'store-order') {
 		body.innerHTML = orderCache.map(order => {
 			const { total } = getOrderTotal(order);
 			const itemCount = order.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+			// Reuse stock-pill styling
 			return `
 				<tr class="order-row" data-order-id="${order.order_id}">
 					<td class="text-center">${order.order_id}</td>
 					<td class="text-center">${itemCount}</td>
 					<td class="text-right">₱${formatPrice(total)}</td>
-					<td class="text-center"><span class="status-pill ${order.order_status.toLowerCase()}">${order.order_status}</span></td>
+					<td class="text-center"><span class="stock-pill order-status-pill ${order.order_status.toLowerCase()}">${order.order_status}</span></td>
 					<td class="text-center">${formatDate(order.order_date)}</td>
 				</tr>
 			`;
@@ -563,9 +564,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		const modalImage = cardModalOverlay.querySelector('.modal-image');
 		const closeButton = cardModalOverlay.querySelector('.modal-close');
 
+		function clearSelectedCards() {
+			document.querySelectorAll('.deal-card.is-selected, .item-card.is-selected').forEach((card) => {
+				card.classList.remove('is-selected');
+			});
+		}
+
 		function closeCardModal() {
 			cardModalOverlay.hidden = true;
 			document.body.style.overflow = '';
+			clearSelectedCards();
 		}
 
 		// Add card pop-up for store cards
@@ -629,6 +637,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		cardsContainer.addEventListener('click', (event) => {
 			const card = event.target.closest('.deal-card, .item-card');
 			if (card) {
+			clearSelectedCards();
+			card.classList.add('is-selected');
 			openCardModal(card);
 			}
 		});
