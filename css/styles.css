@@ -1281,6 +1281,11 @@
 	margin-top: 20px;
 }
 
+.cart-actions.order-actions {
+	justify-content: center;
+	text-align: center;
+}
+
 .order-total td {
 	font-size: 18px;
 }
