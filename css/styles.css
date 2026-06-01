@@ -1,10 +1,10 @@
 /* For all the page background*/
 .dashboard {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
-  background-color: #dfe3e7;
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+	width: 100%;
+	background-color: #dfe3e7;
 }
 
 /* For the header and the header dropdown */
@@ -93,7 +93,7 @@
 }
 
 .edit-save:disabled {
-	opacity: 0.8	;
+	opacity: 0.8;
 	cursor: not-allowed;
 }
 
@@ -113,17 +113,17 @@
 }
 
 .profile-name {
-position: relative;
-display: flex;
-justify-content: right;
-width: fit-content;
-font-family: "Poppins-Bold", Helvetica;
-font-weight: 700;
-color: #10153f;
-font-size: 14px;
-text-align: center;
-letter-spacing: 0;
-line-height: normal;
+	position: relative;
+	display: flex;
+	justify-content: right;
+	width: fit-content;
+	font-family: "Poppins-Bold", Helvetica;
+	font-weight: 700;
+	color: #10153f;
+	font-size: 14px;
+	text-align: center;
+	letter-spacing: 0;
+	line-height: normal;
 }
 
 /* For header dropdown */
@@ -259,7 +259,7 @@ line-height: normal;
 
 /* For the dashboard pages title and main content */
 .dashboard .title-line {
-	width: fit-content; 
+	width: fit-content;
 	align-self: flex-start;
 }
 
@@ -381,10 +381,12 @@ line-height: normal;
 	font-family: "Poppins-Medium", Helvetica;
 	font-size: 12px;
 	font-weight: 700;
+	line-height: 1;
 	letter-spacing: 0.2px;
 	background-color: var(--badge-bg, #6b7280);
 	color: #ffffff;
 	white-space: nowrap;
+	text-align: center;
 }
 
 .stock-pill.stock-out {
@@ -416,20 +418,20 @@ line-height: normal;
 
 /* Count badge next to the Stock Alert title */
 .stock-alert-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 24px;
-    padding: 0 8px;
-    border-radius: 4px;
-    border: 0;
-    font-family: "Poppins-Bold", Helvetica;
-    font-size: 12px;
-    margin-left: 8px;
-    vertical-align: middle;
-    background-color: var(--badge-bg, #6b7280);
-    color: #ffffff;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 24px;
+	height: 24px;
+	padding: 0 8px;
+	border-radius: 4px;
+	border: 0;
+	font-family: "Poppins-Bold", Helvetica;
+	font-size: 12px;
+	margin-left: 8px;
+	vertical-align: middle;
+	background-color: var(--badge-bg, #6b7280);
+	color: #ffffff;
 }
 
 .stock-alert-count.stock-count-warn {
@@ -662,12 +664,10 @@ line-height: normal;
 	width: 100%;
 	height: 100%;
 	border-radius: 12px;
-	background: linear-gradient(
-		246deg,
-		rgba(255, 255, 255, 0) 0%,
-		rgba(3, 8, 31, 0.15) 45%,
-		rgba(3, 8, 31, 0.75) 100%
-	);
+	background: linear-gradient(246deg,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(3, 8, 31, 0.15) 45%,
+			rgba(3, 8, 31, 0.75) 100%);
 }
 
 .deal-card-details {
@@ -795,12 +795,10 @@ line-height: normal;
 	width: 100%;
 	height: 100%;
 	border-radius: 10px 10px 0 0;
-	background: linear-gradient(
-		246deg,
-		rgba(255, 255, 255, 0) 0%,
-		rgba(3, 8, 31, 0.1) 45%,
-		rgba(3, 8, 31, 0.5) 100%
-	);
+	background: linear-gradient(246deg,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(3, 8, 31, 0.1) 45%,
+			rgba(3, 8, 31, 0.5) 100%);
 }
 
 .item-card-details {
@@ -942,7 +940,7 @@ line-height: normal;
 }
 
 
-	
+
 /* For the store browse page */
 .search-bar {
 	width: 300px;
@@ -974,7 +972,8 @@ line-height: normal;
 	min-width: 720px;
 }
 
-.product-table th, .product-table td {
+.product-table th,
+.product-table td {
 	padding: 14px 16px;
 	border-bottom: 1px solid #e6e6e6;
 	vertical-align: middle;
@@ -1077,12 +1076,7 @@ line-height: normal;
 	-moz-appearance: none;
 }
 
-.admin-edit-mode .dashboard-table-card,
-.admin-edit-mode .stock-alerts,
-.admin-edit-mode .top-selling-products {
-	border-color: #1e88e5;
-	box-shadow: 2px 4px 19px rgba(30, 136, 229, 0.2);
-}
+
 
 .order-items-summary {
 	display: inline-flex;
@@ -1125,7 +1119,9 @@ line-height: normal;
 	border-radius: 999px;
 	font-family: "Poppins-Medium", Helvetica;
 	font-size: 12px;
+	line-height: 1;
 	text-transform: capitalize;
+	text-align: center;
 }
 
 .status-pill.pending {
@@ -1133,17 +1129,20 @@ line-height: normal;
 	color: #0d0fa1;
 }
 
-.status-pill.shipped, .status-pill.processing {
+.status-pill.shipped,
+.status-pill.processing {
 	background-color: #e8f5e9;
 	color: #1b5e4e;
 }
 
-.status-pill.delivered, .status-pill.completed {
+.status-pill.delivered,
+.status-pill.completed {
 	background-color: #f1f8e9;
 	color: #37aa0a;
 }
 
-.order-items-header, .order-detail-item {
+.order-items-header,
+.order-detail-item {
 	display: grid;
 	grid-template-columns: 1fr 80px 100px;
 	gap: 16px;
@@ -1229,7 +1228,11 @@ line-height: normal;
 	color: #6f6f6f;
 }
 
-.product-price, .subtotal-value, .shipping-value, .total-value, .discount-value {
+.product-price,
+.subtotal-value,
+.shipping-value,
+.total-value,
+.discount-value {
 	font-family: "Poppins-SemiBold", Helvetica;
 	font-weight: 600;
 	color: #141414;
@@ -1251,7 +1254,8 @@ line-height: normal;
 	text-align: center;
 }
 
-.remove-row, #checkoutButton {
+.remove-row,
+#checkoutButton {
 	background-color: #1e88e5;
 	color: #ffffff;
 	border: none;
@@ -1266,7 +1270,8 @@ line-height: normal;
 	background-color: #f44336;
 }
 
-.remove-row:hover, #checkoutButton:hover {
+.remove-row:hover,
+#checkoutButton:hover {
 	opacity: 0.95;
 }
 
@@ -1288,9 +1293,10 @@ line-height: normal;
 }
 
 
-			
+
 /* For the card modal */
-.card-modal-overlay, .payment-modal-overlay {
+.card-modal-overlay,
+.payment-modal-overlay {
 	position: fixed;
 	inset: 0;
 	display: flex;
@@ -1301,11 +1307,13 @@ line-height: normal;
 	z-index: 999;
 }
 
-.card-modal-overlay[hidden], .payment-modal-overlay[hidden] {
-  	display: none;
+.card-modal-overlay[hidden],
+.payment-modal-overlay[hidden] {
+	display: none;
 }
 
-.card-modal, .payment-modal {
+.card-modal,
+.payment-modal {
 	position: relative;
 	width: min(560px, 100%);
 	max-height: min(90vh, 800px);
@@ -1326,7 +1334,7 @@ line-height: normal;
 	background: #f2f4f8;
 	border-radius: 50%;
 	font-size: 18px;
-  	cursor: pointer;
+	cursor: pointer;
 }
 
 .modal-image {
@@ -1351,7 +1359,8 @@ line-height: normal;
 	color: #10153f;
 }
 
-.modal-subtitle, .modal-description {
+.modal-subtitle,
+.modal-description {
 	margin: 0;
 	font-family: "Poppins-Regular", Helvetica;
 	color: #3d4756;
