@@ -44,13 +44,101 @@
                     </button>
                 </div>
                 <div class="navigation-indicator" style="top: calc(25px + 65px * 4);"></div>
-                <!--Adjust top to: 25px + 65*(order of link - 1)-->
+                
             </div>
 
 
-            <div class="dashboard-main-data" style="padding: 25px">
-                <div class="store-background">
+            <div class="dashboard-main-data">
+                <div class="title-line">
+                    <div class="dashboard-title">Contact Us</div>
                 </div>
+
+                <p class="contact-desc">
+                    Got questions about your order? Want to know more about our products? Or perhaps interested in getting a custom item made? We're here to help for any reason whatsoever! Feel free to reach out on our Facebook page or send a message to our email below! We'll get back to you as soon as we can. Happy shopping!
+                </p>
+
+            
+                <div class="dashboard-summary">
+                    <a href="https://www.facebook.com/enchaintedjsa" target="_blank" class="dashboard-data-card contact-fb-card">
+                        <div class="data-card-title contact-fb-title">Facebook Page</div>
+                        <div class="data-card-data contact-fb-data">@Enchainted</div>
+                    </a>
+
+                    <div class="dashboard-data-card contact-hotline-card">
+                        <div class="data-card-title contact-hotline-title">Mobile Hotline</div>
+                        <div class="data-card-data contact-hotline-data">0917-123-4567</div>
+                    </div>
+                </div>
+
+               
+                <div class="dashboard-table-group">
+                    
+                    
+                    <div class="contact-form-card">
+                        <div class="title-line">
+                            <div class="table-title contact-form-card-title">Send a Quick Message (Non-Functional yet)</div>
+                        </div>
+
+                        <form id="businessInquiryForm" style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; width: 100%;">
+                                <div class="contact-form-group">
+                                    <label class="contact-form-label">Your Name</label>
+                                    <input type="text" id="inquiry-name" placeholder="Juan Dela Cruz" required class="contact-form-input" />
+                                </div>
+                                <div class="contact-form-group">
+                                    <label class="contact-form-label">Email Address</label>
+                                    <input type="email" id="inquiry-email" placeholder="juan@gmail.com" required class="contact-form-input" />
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; width: 100%;">
+                                <div class="contact-form-group">
+                                    <label class="contact-form-label">Order ID (Optional)</label>
+                                    <input type="text" id="inquiry-order" placeholder="e.g. #1004" class="contact-form-input" />
+                                </div>
+                                <div class="contact-form-group">
+                                    <label class="contact-form-label">What is this about?</label>
+                                    <select id="inquiry-subject" required class="contact-form-select">
+                                        <option value="order">Order Inquiry / Follow-up</option>
+                                        <option value="product">Question about a Product</option>
+                                        <option value="custom">Custom Item Request</option>
+                                        <option value="other">General Question</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="contact-form-group" style="width: 100%;">
+                                <label class="contact-form-label">Your Message</label>
+                                <textarea id="inquiry-message" rows="4" placeholder="Type your message here..." required class="contact-form-textarea"></textarea>
+                            </div>
+
+                            <button type="submit" class="contact-submit-btn">Send Message</button>
+                        </form>
+                    </div>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const form = document.getElementById('businessInquiryForm');
+                        if (!form) return;
+
+                        form.addEventListener('submit', (e) => {
+                            e.preventDefault();
+                            
+                            const container = form.closest('.stock-alerts');
+                            if (!container) return;
+
+                            
+                            container.innerHTML = `
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; gap: 16px; padding: 40px 0;">
+                                    <div style="width: 64px; height: 64px; background-color: #dcfce7; color: #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold;">✓</div>
+                                    <div style="font-family: 'Poppins-Bold', Helvetica; font-size: 22px; color: #10153f; font-weight: 700;">Message Received!</div>
+                                    <p style="font-family: 'Poppins-Regular'; font-size: 14px; color: #4b5563; line-height: 1.6; max-width: 400px; margin: 0;">Thanks for reaching out! We will review your message and get back to you within 24 hours. For urgent order updates, feel free to tap our Facebook page card above!</p>
+                                </div>
+                            `;
+                        });
+                    });
+                </script>
             </div>
 
         </main>

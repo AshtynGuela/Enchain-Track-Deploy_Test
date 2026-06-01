@@ -1393,3 +1393,136 @@ line-height: normal;
 	background-color: #1e88e5;
 	color: #ffffff;
 }
+
+
+/* Contact Page Specific Styles */
+.contact-desc {
+	font-family: 'Poppins-Regular', Helvetica, sans-serif;
+	font-size: 16px;
+	color: #4b5563;
+	max-width: 1200px;
+	margin: -20px 20px;
+	line-height: 1.5;
+	align-self: flex-start;
+	text-align: left;
+}
+
+.contact-fb-card {
+	text-decoration: none;
+	cursor: pointer;
+	transition: transform 0.2s;
+	min-width: 250px;
+	flex: 0 1 300px;
+	align-items: center;
+	justify-content: center;
+	height: 110px;
+}
+
+.contact-fb-title {
+	color: #1e88e5;
+	font-weight: 700;
+	font-family: 'Poppins-Bold', Helvetica;
+}
+
+.contact-fb-data {
+	font-size: 18px;
+	color: #10153f;
+	font-weight: 600;
+	width: auto;
+	height: auto;
+	font-family: 'Brush Script MT', cursive;
+}
+
+.contact-hotline-card {
+	min-width: 250px;
+	flex: 0 1 300px;
+	align-items: center;
+	justify-content: center;
+	height: 110px;
+}
+
+.contact-hotline-title {
+	color: #1e88e5;
+	font-weight: 700;
+	font-family: 'Poppins-Bold', Helvetica;
+}
+
+.contact-hotline-data {
+	font-size: 18px;
+	color: #10153f;
+	font-weight: 600;
+	width: auto;
+	height: auto;
+	font-family: 'Poppins-Regular';
+}
+
+.contact-form-card {
+	width: 100%;
+	padding: 24px;
+	box-sizing: border-box;
+	align-items: flex-start;
+	gap: 20px;
+	border-radius: 10px;
+	border: 1px solid #cacaca;
+	box-shadow: 2px 4px 19px #00244540;
+	background-color: #ffffff;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+.contact-form-card-title {
+	font-family: 'Poppins-Bold', Helvetica, sans-serif;
+	font-size: 20px;
+	color: #10153f;
+	font-weight: 700;
+	text-align: left;
+}
+
+.contact-form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.contact-form-label {
+	font-family: 'Poppins-Medium', Helvetica, sans-serif;
+	font-size: 13px;
+	color: #10153f;
+	font-weight: 600;
+	text-align: left;
+}
+
+.contact-form-input,
+.contact-form-select,
+.contact-form-textarea {
+	padding: 10px 14px;
+	border-radius: 8px;
+	border: 1px solid #c8c8c8;
+	font-size: 14px;
+	outline: none;
+	font-family: 'Poppins-Regular';
+}
+
+.contact-form-textarea {
+	resize: vertical;
+}
+
+.contact-submit-btn {
+	background-color: #1e88e5;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 20px;
+	font-family: 'Poppins-Bold', Helvetica, sans-serif;
+	font-size: 14px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: opacity 0.2s;
+	align-self: flex-start;
+	margin-top: 10px;
+}
+
+.contact-submit-btn:hover {
+	opacity: 0.95;
+}
