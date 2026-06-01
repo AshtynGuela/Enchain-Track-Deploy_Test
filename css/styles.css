@@ -39,13 +39,66 @@
 
 .header-actions {
 	display: flex;
-	flex-direction: row-reverse;
-	width: 269px;
-	align-items: right;
-	gap: 15px;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 12px;
 	padding: 5px 10px;
 	position: relative;
 	right: 15px;
+}
+
+.edit-controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.edit-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.edit-toggle,
+.edit-save,
+.edit-cancel {
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	min-width: 80px;
+	padding: 6px 12px;
+	border-radius: 4px;
+	border: 0;
+	font-family: "Poppins-Medium", Helvetica;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.2px;
+	background-color: var(--badge-bg, #6b7280);
+	color: #ffffff;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.edit-toggle {
+	--badge-bg: #06cbe4;
+}
+
+.edit-toggle[aria-pressed="true"] {
+	--badge-bg: #013e74;
+}
+
+.edit-save {
+	--badge-bg: #22c55e;
+}
+
+.edit-save:disabled {
+	opacity: 0.8	;
+	cursor: not-allowed;
+}
+
+.edit-cancel {
+	--badge-bg: #ef4444;
 }
 
 .profile {
@@ -363,20 +416,20 @@ line-height: normal;
 
 /* Count badge next to the Stock Alert title */
 .stock-alert-count {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 24px;
-	height: 24px;
-	padding: 0 8px;
-	border-radius: 4px;
-	border: 0;
-	font-family: "Poppins-Bold", Helvetica;
-	font-size: 12px;
-	margin-left: 8px;
-	vertical-align: middle;
-	background-color: #6b7280;
-	color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 0;
+    font-family: "Poppins-Bold", Helvetica;
+    font-size: 12px;
+    margin-left: 8px;
+    vertical-align: middle;
+    background-color: var(--badge-bg, #6b7280);
+    color: #ffffff;
 }
 
 .stock-alert-count.stock-count-warn {
@@ -975,6 +1028,60 @@ line-height: normal;
 	font-weight: 400;
 	color: #10153f;
 	font-size: 14px;
+}
+
+.product-table td.is-editing {
+	padding: 8px 12px;
+}
+
+.edit-input {
+	width: 100%;
+	min-width: 80px;
+	padding: 6px 8px;
+	border: 1px solid #cfd8e3;
+	border-radius: 6px;
+	font-family: "Poppins-Regular", Helvetica;
+	font-size: 13px;
+	color: #10153f;
+}
+
+.edit-input:focus {
+	outline: 2px solid #1e88e5;
+	outline-offset: 1px;
+}
+
+.text-right .edit-input {
+	text-align: right;
+}
+
+.text-center .edit-input {
+	text-align: center;
+}
+
+.order-status {
+	border: 1px solid #cfd8e3;
+	border-radius: 6px;
+	padding: 6px 8px;
+	font-family: "Poppins-Regular", Helvetica;
+	font-size: 13px;
+	color: #10153f;
+}
+
+.order-status:disabled {
+	border: none;
+	background: transparent;
+	padding-left: 0;
+	padding-right: 0;
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+}
+
+.admin-edit-mode .dashboard-table-card,
+.admin-edit-mode .stock-alerts,
+.admin-edit-mode .top-selling-products {
+	border-color: #1e88e5;
+	box-shadow: 2px 4px 19px rgba(30, 136, 229, 0.2);
 }
 
 .order-items-summary {

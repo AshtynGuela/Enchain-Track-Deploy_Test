@@ -32,6 +32,290 @@ function parseProductList(value) {
     .filter(Boolean);
 }
 
+// Edit mode edits through id
+const EDIT_MODE_STORAGE_KEY = "adminEditMode";
+const editBuffer = new Map();
+let editModeEnabled = false;
+
+function getEditModeControls() {
+  return {
+    toggle: document.querySelector(".edit-toggle"),
+    actions: document.querySelector(".edit-actions"),
+    save: document.querySelector(".edit-save"),
+    cancel: document.querySelector(".edit-cancel")
+  };
+}
+
+function normalizeEditValue(value, type) {
+  if (["number", "currency", "percent"].includes(type)) {
+    return parseNumberValue(value);
+  }
+  return String(value ?? "").trim();
+}
+
+function formatEditDisplay(value, type) {
+  if (type === "currency") {
+    return formatCurrency(value);
+  }
+  if (type === "percent") {
+    const numeric = Number(value) || 0;
+    return `${numeric}%`;
+  }
+  return String(value ?? "");
+}
+
+function updateEditModeControls() {
+  const { toggle, actions, save } = getEditModeControls();
+  if (toggle) {
+    toggle.setAttribute("aria-pressed", editModeEnabled ? "true" : "false");
+    toggle.textContent = editModeEnabled ? "Exit Edit Mode" : "Edit Mode";
+  }
+  if (actions) {
+    actions.hidden = !editModeEnabled;
+  }
+  if (save) {
+    save.disabled = editBuffer.size === 0;
+  }
+}
+
+function enterEditMode() {
+  document.body.classList.add("admin-edit-mode");
+  document.querySelectorAll('[data-editable="true"]').forEach((cell) => {
+    if (cell.querySelector("input")) return;
+
+    const type = cell.dataset.type || "text";
+    const rawValue = normalizeEditValue(cell.dataset.value ?? cell.textContent, type);
+    cell.dataset.originalValue = String(rawValue ?? "");
+
+    const input = document.createElement("input");
+    input.type = type === "text" ? "text" : "number";
+    if (type === "currency" || type === "percent") {
+      input.step = "0.01";
+    } else if (type === "number") {
+      input.step = "1";
+    }
+    if (type !== "text") {
+      input.min = "0";
+    }
+    if (type === "percent") {
+      input.max = "100";
+    }
+    input.value = rawValue ?? "";
+    input.className = "edit-input";
+    input.addEventListener("input", () => queueEditChange(cell, input.value));
+
+    cell.textContent = "";
+    cell.appendChild(input);
+    cell.classList.add("is-editing");
+  });
+
+  document.querySelectorAll('[data-edit-control="order-status"]').forEach((select) => {
+    if (!select.dataset.originalValue) {
+      select.dataset.originalValue = select.value;
+    }
+    select.disabled = false;
+  });
+}
+
+function exitEditMode({ discard } = {}) {
+  document.body.classList.remove("admin-edit-mode");
+  document.querySelectorAll('[data-editable="true"]').forEach((cell) => {
+    const input = cell.querySelector("input");
+    const hasOriginal = Object.prototype.hasOwnProperty.call(cell.dataset, "originalValue");
+    if (!input && !hasOriginal) return;
+
+    const type = cell.dataset.type || "text";
+    const original = cell.dataset.originalValue ?? "";
+    const rawValue = discard ? original : (input ? input.value : original);
+    const normalized = normalizeEditValue(rawValue, type);
+
+    cell.textContent = formatEditDisplay(normalized, type);
+    if (["number", "currency", "percent"].includes(type)) {
+      cell.dataset.value = String(normalized);
+    }
+    cell.classList.remove("is-editing");
+    delete cell.dataset.originalValue;
+  });
+
+  document.querySelectorAll('[data-edit-control="order-status"]').forEach((select) => {
+    if (discard && select.dataset.originalValue) {
+      select.value = select.dataset.originalValue;
+    }
+    delete select.dataset.originalValue;
+    select.disabled = true;
+  });
+}
+
+function applyEditModeToPage(options = {}) {
+  if (editModeEnabled) {
+    enterEditMode();
+  } else {
+    exitEditMode({ discard: options.discardChanges });
+  }
+  updateEditModeControls();
+}
+
+function setEditModeEnabled(nextState, options = {}) {
+  editModeEnabled = Boolean(nextState);
+  localStorage.setItem(EDIT_MODE_STORAGE_KEY, editModeEnabled ? "on" : "off");
+  applyEditModeToPage(options);
+}
+
+function clearEditBuffer() {
+  editBuffer.clear();
+  updateEditModeControls();
+}
+
+function queueEditChange(cell, value) {
+  const row = cell.closest("tr");
+  if (!row) return;
+
+  const entity = row.dataset.entity;
+  const id = row.dataset.id;
+  const field = cell.dataset.field;
+  if (!entity || !id || !field) return;
+
+  const type = cell.dataset.type || "text";
+  const normalized = normalizeEditValue(value, type);
+  const baseline = normalizeEditValue(cell.dataset.originalValue ?? "", type);
+  const key = `${entity}:${id}`;
+
+  if (!editBuffer.has(key)) {
+    editBuffer.set(key, { entity, id, fields: {} });
+  }
+
+  const entry = editBuffer.get(key);
+  if (normalized === baseline) {
+    delete entry.fields[field];
+  } else {
+    entry.fields[field] = normalized;
+  }
+
+  if (Object.keys(entry.fields).length === 0) {
+    editBuffer.delete(key);
+  }
+  updateEditModeControls();
+}
+
+function queueOrderStatusChange(select) {
+  const row = select.closest("tr");
+  if (!row) return;
+
+  const entity = row.dataset.entity;
+  const id = row.dataset.id;
+  if (!entity || !id) return;
+
+  if (!select.dataset.originalValue) {
+    select.dataset.originalValue = select.defaultValue || "";
+  }
+
+  const key = `${entity}:${id}`;
+  const normalized = String(select.value || "").toLowerCase();
+  const baseline = String(select.dataset.originalValue || "").toLowerCase();
+
+  if (!editBuffer.has(key)) {
+    editBuffer.set(key, { entity, id, fields: {} });
+  }
+
+  const entry = editBuffer.get(key);
+  if (normalized === baseline) {
+    delete entry.fields.order_status;
+  } else {
+    entry.fields.order_status = normalized;
+  }
+
+  if (Object.keys(entry.fields).length === 0) {
+    editBuffer.delete(key);
+  }
+  updateEditModeControls();
+}
+
+async function saveEditModeChanges() {
+  if (editBuffer.size === 0) {
+    setEditModeEnabled(false, { discardChanges: false });
+    return;
+  }
+
+  const { save } = getEditModeControls();
+  if (save) save.disabled = true;
+
+  const updates = Array.from(editBuffer.values()).map(async (entry) => {
+    let endpoint = "";
+    let payload = entry.fields;
+
+    if (entry.entity === "inventory") {
+      endpoint = `/admin/inventory/${entry.id}`;
+    } else if (entry.entity === "products") {
+      endpoint = `/admin/products/${entry.id}`;
+    } else if (entry.entity === "suppliers") {
+      endpoint = `/admin/suppliers/${entry.id}`;
+    } else if (entry.entity === "orders") {
+      endpoint = `/admin/orders/${entry.id}/status`;
+      payload = { status: entry.fields.order_status };
+    }
+
+    if (!endpoint) return;
+
+    const res = await fetch(`${ADMIN_API_BASE}${endpoint}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      throw new Error(`Update failed for ${entry.entity} ${entry.id}`);
+    }
+  });
+
+  try {
+    await Promise.all(updates);
+    clearEditBuffer();
+    setEditModeEnabled(false, { discardChanges: false });
+    await refreshAdminTables();
+  } catch (err) {
+    console.error(err);
+    if (save) save.disabled = false;
+    alert("Some updates failed. Please review and try again.");
+  }
+}
+
+function cancelEditModeChanges() {
+  clearEditBuffer();
+  setEditModeEnabled(false, { discardChanges: true });
+}
+
+function initEditModeControls() {
+  const controls = getEditModeControls();
+  if (!controls.toggle) return;
+
+  if (!controls.toggle.dataset.bound) {
+    controls.toggle.addEventListener("click", () => {
+      if (editModeEnabled) {
+        if (editBuffer.size > 0 && !window.confirm("Discard unsaved edits?")) {
+          return;
+        }
+        cancelEditModeChanges();
+      } else {
+        setEditModeEnabled(true, { discardChanges: false });
+      }
+    });
+    controls.toggle.dataset.bound = "true";
+  }
+
+  if (controls.save && !controls.save.dataset.bound) {
+    controls.save.addEventListener("click", saveEditModeChanges);
+    controls.save.dataset.bound = "true";
+  }
+
+  if (controls.cancel && !controls.cancel.dataset.bound) {
+    controls.cancel.addEventListener("click", cancelEditModeChanges);
+    controls.cancel.dataset.bound = "true";
+  }
+
+  editModeEnabled = localStorage.getItem(EDIT_MODE_STORAGE_KEY) === "on";
+  applyEditModeToPage({ discardChanges: false });
+}
+
 // Compact product list summary for admin dash
 function buildOrderItemsSummary(value) {
   const items = parseProductList(value);
@@ -203,6 +487,38 @@ function initAdminOrderDetails() {
   });
 }
 
+function bindOrderStatusEvents() {
+  document.querySelectorAll(".order-status").forEach((select) => {
+    if (select.dataset.bound) return;
+    select.addEventListener("change", (event) => {
+      const target = event.currentTarget;
+      if (!editModeEnabled) {
+        target.value = target.dataset.originalValue || target.value;
+        return;
+      }
+      queueOrderStatusChange(target);
+    });
+    select.dataset.bound = "true";
+  });
+}
+
+async function refreshAdminTables() {
+  const tasks = [];
+  if (document.getElementById("inventoryBody")) tasks.push(loadInventory());
+  if (document.getElementById("productsBody")) tasks.push(loadProducts());
+  if (document.getElementById("salesBody")) tasks.push(loadSales());
+  if (document.getElementById("ordersBody")) tasks.push(loadOrders());
+  if (document.getElementById("suppliersBody")) tasks.push(loadSuppliers());
+  if (tasks.length) {
+    const results = await Promise.allSettled(tasks);
+    results.forEach((result) => {
+      if (result.status === "rejected") {
+        console.error("Admin table refresh failed:", result.reason);
+      }
+    });
+  }
+}
+
 async function fetchJson(path) {
   const res = await fetch(`${ADMIN_API_BASE}${path}`);
   if (!res.ok) throw new Error(`Request failed: ${path}`);
@@ -232,7 +548,8 @@ function normalizeSortValue(value, type) {
 function getCellSortValue(cell, type) {
   if (!cell) return "";
   const select = cell.querySelector("select");
-  const rawValue = select ? select.value : cell.textContent;
+  const input = cell.querySelector("input");
+  const rawValue = select ? select.value : (input ? input.value : cell.textContent);
   return normalizeSortValue(rawValue, type);
 }
 
@@ -395,15 +712,20 @@ async function loadDashboardHome() {
 
 async function loadInventory() {
   const rows = await fetchJson("/admin/inventory");
-  document.getElementById("inventoryBody").innerHTML = rows.map(row => `
-    <tr>
+  document.getElementById("inventoryBody").innerHTML = rows.map((row) => {
+    const stock = Number(row.item_stock) || 0;
+    const price = Number(row.item_price) || 0;
+    return `
+    <tr data-entity="inventory" data-id="${row.goods_id}">
       <td>${row.goods_id}</td>
-      <td>${row.item_name}</td>
-      <td class="text-center">${row.item_stock}</td>
-      <td class="text-right">${formatCurrency(row.item_price)}</td>
+      <td data-editable="true" data-field="item_name" data-type="text">${row.item_name}</td>
+      <td class="text-center" data-editable="true" data-field="item_stock" data-type="number" data-value="${stock}">${stock}</td>
+      <td class="text-right" data-editable="true" data-field="item_price" data-type="currency" data-value="${price}">${formatCurrency(price)}</td>
       <td>${row.supplier_name || ""}</td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
+  applyEditModeToPage({ discardChanges: false });
 }
 
 async function loadProducts() {
@@ -412,21 +734,27 @@ async function loadProducts() {
 
   try {
     const rows = await fetchJson("/admin/products");
-    body.innerHTML = rows.map(row => `
-      <tr>
+    body.innerHTML = rows.map((row) => {
+      const stock = Number(row.product_stock) || 0;
+      const price = Number(row.product_price) || 0;
+      const discount = Number(row.product_discount) || 0;
+      return `
+      <tr data-entity="products" data-id="${row.product_id}">
         <td>${row.product_id}</td>
-        <td>${row.product_name}</td>
-        <td>${row.product_type || ""}</td>
-        <td class="text-center">${row.product_stock}</td>
-        <td class="text-right">${formatCurrency(row.product_price)}</td>
-        <td class="text-center">${row.product_discount || 0}%</td>
+        <td data-editable="true" data-field="product_name" data-type="text">${row.product_name}</td>
+        <td data-editable="true" data-field="product_type" data-type="text">${row.product_type || ""}</td>
+        <td class="text-center" data-editable="true" data-field="product_stock" data-type="number" data-value="${stock}">${stock}</td>
+        <td class="text-right" data-editable="true" data-field="product_price" data-type="currency" data-value="${price}">${formatCurrency(price)}</td>
+        <td class="text-center" data-editable="true" data-field="product_discount" data-type="percent" data-value="${discount}">${discount}%</td>
         <td>${row.supplier_name || ""}</td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
 
     if (!rows.length) {
       body.innerHTML = `<tr><td colspan="7" class="text-center">No products found.</td></tr>`;
     }
+    applyEditModeToPage({ discardChanges: false });
     return rows;
   } catch (err) {
     console.error('Products load failed:', err);
@@ -438,7 +766,7 @@ async function loadProducts() {
 async function loadSales() {
   const rows = await fetchJson("/admin/sales");
   document.getElementById("salesBody").innerHTML = rows.map(row => `
-    <tr class="admin-order-row" data-order-id="${row.order_id}">
+    <tr class="admin-order-row" data-order-id="${row.order_id}" data-entity="orders" data-id="${row.order_id}">
       <td>${row.order_id}</td>
       <td>${formatDateShort(row.order_date)}</td>
       <td>${row.customer_name || ""}</td>
@@ -448,7 +776,7 @@ async function loadSales() {
       <td class="text-right">${formatCurrency(row.discount)}</td>
       <td class="text-right">${formatCurrency(row.total)}</td>
       <td>
-        <select class="order-status" data-order-id="${row.order_id}">
+        <select class="order-status" data-order-id="${row.order_id}" data-edit-control="order-status" data-original-value="${row.order_status}" ${editModeEnabled ? "" : "disabled"}>
           <option value="pending" ${row.order_status === 'pending' ? 'selected' : ''}>Pending</option>
           <option value="processing" ${row.order_status === 'processing' ? 'selected' : ''}>Processing</option>
           <option value="completed" ${row.order_status === 'completed' ? 'selected' : ''}>Completed</option>
@@ -456,56 +784,42 @@ async function loadSales() {
       </td>
     </tr>
   `).join("");
-
-  document.querySelectorAll('.order-status').forEach((select) => {
-    if (select.dataset.bound) return;
-    select.addEventListener('change', async (event) => {
-      const target = event.currentTarget;
-      const orderId = target.dataset.orderId;
-      const status = target.value;
-      try {
-        const res = await fetch(`${ADMIN_API_BASE}/admin/orders/${orderId}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status })
-        });
-        if (!res.ok) {
-          throw new Error('Status update failed');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Could not update status.');
-      }
-    });
-    select.dataset.bound = 'true';
-  });
+  bindOrderStatusEvents();
 }
 
 async function loadOrders() {
   const rows = await fetchJson("/admin/orders");
   document.getElementById("ordersBody").innerHTML = rows.map(row => `
-    <tr class="admin-order-row" data-order-id="${row.order_id}">
+    <tr class="admin-order-row" data-order-id="${row.order_id}" data-entity="orders" data-id="${row.order_id}">
       <td>${row.order_id}</td>
       <td>${formatDateShort(row.order_date)}</td>
       <td>${row.customer_name || ""}</td>
       <td>${buildOrderItemsSummary(row.product_list)}</td>
       <td class="text-center">${row.items}</td>
-      <td>${row.order_status}</td>
+      <td>
+        <select class="order-status" data-order-id="${row.order_id}" data-edit-control="order-status" data-original-value="${row.order_status}" ${editModeEnabled ? "" : "disabled"}>
+          <option value="pending" ${row.order_status === 'pending' ? 'selected' : ''}>Pending</option>
+          <option value="processing" ${row.order_status === 'processing' ? 'selected' : ''}>Processing</option>
+          <option value="completed" ${row.order_status === 'completed' ? 'selected' : ''}>Completed</option>
+        </select>
+      </td>
     </tr>
   `).join("");
+  bindOrderStatusEvents();
 }
 
 async function loadSuppliers() {
   const rows = await fetchJson("/admin/suppliers");
   document.getElementById("suppliersBody").innerHTML = rows.map(row => `
-    <tr>
+    <tr data-entity="suppliers" data-id="${row.supplier_id}">
       <td>${row.supplier_id}</td>
-      <td>${row.supplier_name}</td>
-      <td>${row.supplier_number || ""}</td>
+      <td data-editable="true" data-field="supplier_name" data-type="text">${row.supplier_name}</td>
+      <td data-editable="true" data-field="supplier_number" data-type="text">${row.supplier_number || ""}</td>
       <td class="text-center">${row.goods_count}</td>
       <td class="text-center">${row.product_count}</td>
     </tr>
   `).join("");
+  applyEditModeToPage({ discardChanges: false });
 }
 
 window.loadProducts = loadProducts;
@@ -522,6 +836,7 @@ async function initDashboard() {
     profileName.textContent = `${storedName} ▼`;
   }
 
+  initEditModeControls();
   initAdminDropdownFallback();
   initSortableTables();
   initAdminOrderDetails();

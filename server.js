@@ -713,6 +713,54 @@ app.get("/admin/dashboard/summary", async (req, res) => {
   }
 });
 
+// Build update clauses for admin edit mode.
+function buildUpdateFields(body, fieldMap) {
+    const updates = [];
+    const values = [];
+    let invalid = false;
+
+    Object.entries(fieldMap).forEach(([field, config]) => {
+        if (body[field] === undefined) return;
+        let value = body[field];
+
+        if (config.type === "number") {
+            const numeric = Number(value);
+            if (Number.isNaN(numeric)) {
+                invalid = true;
+                return;
+            }
+            value = numeric;
+            if (typeof config.min === "number") {
+                value = Math.max(value, config.min);
+            }
+            if (typeof config.max === "number") {
+                value = Math.min(value, config.max);
+            }
+        } else {
+            value = String(value).trim();
+        }
+
+        updates.push(`${config.column} = ?`);
+        values.push(value);
+    });
+
+    return { updates, values, invalid };
+}
+
+app.get("/admin/customers", async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT customer_id, customer_name
+            FROM customer
+            ORDER BY customer_name
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch customers" });
+    }
+});
+
 app.get("/admin/dashboard/stock-alerts", async (req, res) => {
   const threshold = Number(req.query.threshold) || 5;
   try {
@@ -758,7 +806,7 @@ app.get("/admin/dashboard/top-products", async (req, res) => {
 app.get("/admin/inventory", async (req, res) => {
   try {
     const [rows] = await db.query(`
-            SELECT g.goods_id, g.item_name, g.item_stock, g.item_price, s.supplier_name
+                        SELECT g.goods_id, g.item_name, g.item_stock, g.item_price, g.supplier_id, s.supplier_name
             FROM goods g
             LEFT JOIN supplier s ON s.supplier_id = g.supplier_id
             ORDER BY g.item_stock ASC, g.item_name
@@ -770,11 +818,75 @@ app.get("/admin/inventory", async (req, res) => {
   }
 });
 
+app.post("/admin/inventory", async (req, res) => {
+        const { item_name, item_stock, item_price, supplier_id } = req.body || {};
+        if (!item_name || supplier_id === undefined) {
+                return res.status(400).json({ message: "Missing inventory fields" });
+        }
+
+        const stock = Number(item_stock);
+        const price = Number(item_price);
+        const supplierId = Number(supplier_id);
+        if (Number.isNaN(stock) || Number.isNaN(price) || Number.isNaN(supplierId)) {
+                return res.status(400).json({ message: "Invalid inventory values" });
+        }
+
+        try {
+                const [result] = await db.query(
+                        `INSERT INTO goods (item_name, item_stock, item_price, supplier_id)
+                         VALUES (?, ?, ?, ?)`
+                        , [String(item_name).trim(), Math.max(stock, 0), Math.max(price, 0), supplierId]
+                );
+                res.status(201).json({ message: "Inventory item created", id: result.insertId });
+        } catch (err) {
+                console.error(err);
+                res.status(500).json({ message: "Failed to create inventory item" });
+        }
+});
+
+app.put("/admin/inventory/:goodsId", async (req, res) => {
+    const { goodsId } = req.params;
+    if (!goodsId) {
+        return res.status(400).json({ message: "Missing goodsId" });
+    }
+
+    const { updates, values, invalid } = buildUpdateFields(req.body || {}, {
+        item_name: { column: "item_name", type: "text" },
+        item_stock: { column: "item_stock", type: "number", min: 0 },
+        item_price: { column: "item_price", type: "number", min: 0 }
+    });
+
+    if (invalid) {
+        return res.status(400).json({ message: "Invalid inventory values" });
+    }
+
+    if (!updates.length) {
+        return res.status(400).json({ message: "No valid inventory fields provided" });
+    }
+
+    try {
+        values.push(goodsId);
+        const [result] = await db.query(
+            `UPDATE goods SET ${updates.join(", ")} WHERE goods_id = ?`,
+            values
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Inventory item not found" });
+        }
+
+        res.json({ message: "Inventory updated." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to update inventory" });
+    }
+});
+
 // product report
 app.get("/admin/products", async (req, res) => {
   try {
     const [rows] = await db.query(`
-            SELECT p.product_id, p.product_name, p.product_type, p.product_price, p.product_discount, p.product_stock, s.supplier_name
+                        SELECT p.product_id, p.product_name, p.product_type, p.product_price, p.product_discount, p.product_stock, p.supplier_id, s.supplier_name
             FROM product p
             LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
             ORDER BY p.product_name
@@ -784,6 +896,46 @@ app.get("/admin/products", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch products" });
   }
+});
+
+app.put("/admin/products/:productId", async (req, res) => {
+    const { productId } = req.params;
+    if (!productId) {
+        return res.status(400).json({ message: "Missing productId" });
+    }
+
+    const { updates, values, invalid } = buildUpdateFields(req.body || {}, {
+        product_name: { column: "product_name", type: "text" },
+        product_type: { column: "product_type", type: "text" },
+        product_stock: { column: "product_stock", type: "number", min: 0 },
+        product_price: { column: "product_price", type: "number", min: 0 },
+        product_discount: { column: "product_discount", type: "number", min: 0, max: 100 }
+    });
+
+    if (invalid) {
+        return res.status(400).json({ message: "Invalid product values" });
+    }
+
+    if (!updates.length) {
+        return res.status(400).json({ message: "No valid product fields provided" });
+    }
+
+    try {
+        values.push(productId);
+        const [result] = await db.query(
+            `UPDATE product SET ${updates.join(", ")} WHERE product_id = ?`,
+            values
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        res.json({ message: "Product updated." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to update product" });
+    }
 });
 
 // sales report
@@ -920,10 +1072,70 @@ app.get("/admin/suppliers", async (req, res) => {
   }
 });
 
+app.put("/admin/suppliers/:supplierId", async (req, res) => {
+    const { supplierId } = req.params;
+    if (!supplierId) {
+        return res.status(400).json({ message: "Missing supplierId" });
+    }
+
+    const { updates, values, invalid } = buildUpdateFields(req.body || {}, {
+        supplier_name: { column: "supplier_name", type: "text" },
+        supplier_number: { column: "supplier_number", type: "text" }
+    });
+
+    if (invalid) {
+        return res.status(400).json({ message: "Invalid supplier values" });
+    }
+
+    if (!updates.length) {
+        return res.status(400).json({ message: "No valid supplier fields provided" });
+    }
+
+    try {
+        values.push(supplierId);
+        const [result] = await db.query(
+            `UPDATE supplier SET ${updates.join(", ")} WHERE supplier_id = ?`,
+            values
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Supplier not found" });
+        }
+
+        res.json({ message: "Supplier updated." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to update supplier" });
+    }
+});
+
 app.get('/', async (req, res) => {
     res.sendFile(path.join(__dirname, 'store', 'home.html'));
 });
 
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+});
+
+app.delete("/admin/inventory/:goodsId", async (req, res) => {
+    const { goodsId } = req.params;
+    if (!goodsId) {
+        return res.status(400).json({ message: "Missing goodsId" });
+    }
+
+    try {
+        const [result] = await db.query(
+            `DELETE FROM goods WHERE goods_id = ?`,
+            [goodsId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Inventory item not found" });
+        }
+
+        res.json({ message: "Inventory item deleted." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to delete inventory item" });
+    }
 });
