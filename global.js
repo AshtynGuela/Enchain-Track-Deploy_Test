@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = ['null', 'file://'].includes(window.location.origin)
+  ? 'http://localhost:3000'
+  : window.location.origin;
 let CURRENT_USER_ID = "00000003";
 
 

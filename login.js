@@ -2,7 +2,9 @@
  * This file contains the js code for the login and sign up.
  */
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = ['null', 'file://'].includes(window.location.origin)
+  ? 'http://localhost:3000'
+  : window.location.origin;
 clearUserSession();
 
 document.addEventListener("DOMContentLoaded", () => {
