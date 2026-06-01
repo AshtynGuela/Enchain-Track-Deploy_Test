@@ -16,13 +16,14 @@ app.use(cors());
 app.use(express.static(path.join(__dirname)));
 
 
-// To connect with MySQL database in xampp
+// To connect with MySQL database
 const mysql = require("mysql2/promise");
 const db = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'enchain' //Depends on the name used (change later)
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT || 3306
 });
 
 // test if DB works
@@ -174,53 +175,53 @@ app.get("/user/:userId", async (req, res) => {
 
 // check if a product exists in the database via productID
 async function productExists(productId) {
-	try {
-		const [product] = await db.query(`SELECT 1 FROM product WHERE product_id = ?`, [productId]);
-		return product.length > 0;
-	} catch (err) {
-		console.error(err);
-		return false;
-	}
+    try {
+        const [product] = await db.query(`SELECT 1 FROM product WHERE product_id = ?`, [productId]);
+        return product.length > 0;
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
 }
 
 // checks customer existance
 async function customerExists(userId) {
-	try {
-		const [customer] = await db.query(`SELECT 1 FROM customer WHERE customer_id = ?`, [userId]);
-		return customer.length > 0;
-	} catch (err) {
-		console.error(err);
-		return false;
-	}
+    try {
+        const [customer] = await db.query(`SELECT 1 FROM customer WHERE customer_id = ?`, [userId]);
+        return customer.length > 0;
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
 }
 
 // checks order existance
-async function orderExists(orderId, status=null) {
-	try {
-		let query = `SELECT 1 FROM orders WHERE order_id = ?`;
-		let params = [orderId];
+async function orderExists(orderId, status = null) {
+    try {
+        let query = `SELECT 1 FROM orders WHERE order_id = ?`;
+        let params = [orderId];
 
-		if (status !== null) {
-			query += ` AND order_status = ?`;
-			params.push(status);
-		}
+        if (status !== null) {
+            query += ` AND order_status = ?`;
+            params.push(status);
+        }
 
-		const [order] = await db.query(query, params);
-		return order.length > 0;
-	} catch (err) {
-		console.error(err);
-		return false;
-	}
+        const [order] = await db.query(query, params);
+        return order.length > 0;
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
 }
 
 // updates product stock by reducing the quantity ordered
 async function updateProductStock(productId, quantity) {
-	// Assumes quantity is less than or equal to current stock (should be checked before calling this function)
-	try {
-		await db.query(`UPDATE product SET product_stock = product_stock - ? WHERE product_id = ?`, [quantity, productId]);
-	} catch (err) {
-		console.error(err);
-	}
+    // Assumes quantity is less than or equal to current stock (should be checked before calling this function)
+    try {
+        await db.query(`UPDATE product SET product_stock = product_stock - ? WHERE product_id = ?`, [quantity, productId]);
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 
@@ -297,8 +298,8 @@ app.get("/cart/:userId", async (req, res) => {
     if (!userId) { return res.status(400).json({ message: "Missing userId" }); }
 
     try {
-		const uExists = await customerExists(userId);
-		if (!uExists) { return res.status(404).json({ message: "User not found" }); }
+        const uExists = await customerExists(userId);
+        if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
         const [cart] = await db.query(`
             SELECT p.*, oi.item_quantity
@@ -323,15 +324,15 @@ app.post("/cart/:userId/:productId/:quantity", async (req, res) => {
     if (!userId || !productId || !quantity) { return res.status(400).json({ message: "Missing data" }); }
 
     try {
-		const uExists = await customerExists(userId);
-		if (!uExists) { return res.status(404).json({ message: "User not found" }); }
+        const uExists = await customerExists(userId);
+        if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
-		const pExists = await productExists(productId);
-		if (!pExists) { return res.status(404).json({ message: "Product not found" }); }
+        const pExists = await productExists(productId);
+        if (!pExists) { return res.status(404).json({ message: "Product not found" }); }
 
         // Check existing cart
         let [cartRows] = await db.query(
-			`SELECT order_id
+            `SELECT order_id
              FROM orders
              WHERE customer_id = ?
              AND order_status = 'cart'
@@ -345,9 +346,9 @@ app.post("/cart/:userId/:productId/:quantity", async (req, res) => {
         if (cartRows.length === 0) {
             const [[row]] = await db.query(`SELECT COALESCE(MAX(order_id), 0) + 1 AS nextId FROM orders `);
 
-			const nextId = row.nextId;
+            const nextId = row.nextId;
 
-			await db.query(`
+            await db.query(`
 				INSERT INTO orders (
 					order_id,
 					customer_id,
@@ -390,19 +391,19 @@ app.post("/cart/:userId/:productId/:quantity", async (req, res) => {
 
 // delete item from cart
 app.delete("/cart/:userId/:productId", async (req, res) => {
-	const { userId, productId } = req.params;
-    if (!userId || !productId) { return res.status(400).json({  message: "Missing data" });}
+    const { userId, productId } = req.params;
+    if (!userId || !productId) { return res.status(400).json({ message: "Missing data" }); }
 
-	try {
-		const uExists = await customerExists(userId);
-		if (!uExists) { return res.status(404).json({ message: "User not found"}); }
+    try {
+        const uExists = await customerExists(userId);
+        if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
-		const pExists = await productExists(productId);
-		if (!pExists) { return res.status(404).json({ message: "Product not found" }); }
+        const pExists = await productExists(productId);
+        if (!pExists) { return res.status(404).json({ message: "Product not found" }); }
 
         // Check existing cart
         let [cartRows] = await db.query(
-			`SELECT order_id
+            `SELECT order_id
              FROM orders
              WHERE customer_id = ?
              AND order_status = 'cart'
@@ -412,7 +413,7 @@ app.delete("/cart/:userId/:productId", async (req, res) => {
 
         if (cartRows.length === 0) { return res.status(404).json({ message: "Cart not found" }); }
 
-		orderId = cartRows[0].order_id;
+        orderId = cartRows[0].order_id;
 
         let [updateResult] = await db.query(
             `DELETE FROM order_item WHERE order_id = ? AND product_id = ?`,
@@ -429,20 +430,20 @@ app.delete("/cart/:userId/:productId", async (req, res) => {
 
 // update item in cart
 app.put("/cart/:userId/:productId/:quantity", async (req, res) => {
-	const { userId, productId, quantity } = req.params;
+    const { userId, productId, quantity } = req.params;
     const qty = Number(quantity);
 
-	if (!userId || !productId || !quantity ) { return res.status(400).json({ message: "Missing data" }); }
+    if (!userId || !productId || !quantity) { return res.status(400).json({ message: "Missing data" }); }
 
-	try {
-		const uExists = await customerExists(userId);
-		if (!uExists) { return res.status(404).json({ message: "User not found" }); }
+    try {
+        const uExists = await customerExists(userId);
+        if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
-		const pExists = await productExists(productId);
-		if (!pExists) { return res.status(404).json({ message: "Product not found" }); }
+        const pExists = await productExists(productId);
+        if (!pExists) { return res.status(404).json({ message: "Product not found" }); }
 
         let [cartRows] = await db.query(
-			`SELECT order_id
+            `SELECT order_id
              FROM orders
              WHERE customer_id = ?
              AND order_status = 'cart'
@@ -451,13 +452,13 @@ app.put("/cart/:userId/:productId/:quantity", async (req, res) => {
         );
 
         if (cartRows.length === 0) { return res.status(404).json({ message: "Cart not found" }); }
-        
-		let orderId = cartRows[0].order_id;
+
+        let orderId = cartRows[0].order_id;
 
 
         const [[product]] = await db.query(`SELECT product_stock FROM product WHERE product_id = ?`, [productId]);
 
-        if (quantity <= 0 || quantity > product.product_stock) { return res.status(400).json({ message: "Invalid quantity" });}
+        if (quantity <= 0 || quantity > product.product_stock) { return res.status(400).json({ message: "Invalid quantity" }); }
 
         let [updateResult] = await db.query(
             `UPDATE order_item
@@ -479,12 +480,12 @@ app.put("/cart/:userId/:productId/:quantity", async (req, res) => {
 
 // get orders for user
 app.get("/orders/:userId", async (req, res) => {
-  	const { userId } = req.params;
+    const { userId } = req.params;
     if (!userId) { return res.status(400).json({ message: "Missing userId" }); }
 
     try {
-		const uExists = await customerExists(userId);
-		if (!uExists) { return res.status(404).json({ message: "User not found" }); }
+        const uExists = await customerExists(userId);
+        if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
         const [orders] = await db.query(`
             SELECT o.*, p.*, oi.item_quantity
@@ -507,18 +508,18 @@ app.get("/orders/:userId", async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({message: "Failed to fetch orders"});
+        res.status(500).json({ message: "Failed to fetch orders" });
     }
 });
 
 // add orders for user, turn cart into order
 app.post("/orders/:userId", async (req, res) => {
-	const { userId } = req.params;
+    const { userId } = req.params;
     if (!userId) { return res.status(400).json({ message: "Missing userId" }); }
 
     try {
-		const uExists = await customerExists(userId);
-		if (!uExists) { return res.status(404).json({ message: "User not found" }); }
+        const uExists = await customerExists(userId);
+        if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
         const [[cartExists]] = await db.query(
             `SELECT 1 FROM orders WHERE customer_id = ? AND order_status = 'cart' LIMIT 1`,
@@ -573,8 +574,8 @@ app.post("/orders/:userId/:gcashref", async (req, res) => {
     if (!gcashref) { return res.status(400).json({ message: "Missing gcashref" }); }
 
     try {
-		const uExists = await customerExists(userId);
-		if (!uExists) { return res.status(404).json({ message: "User not found" }); }
+        const uExists = await customerExists(userId);
+        if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
         const [[cartExists]] = await db.query(
             `SELECT 1 FROM orders WHERE customer_id = ? AND order_status = 'cart' LIMIT 1`,
@@ -659,7 +660,7 @@ app.post("/quickbuy", async (req, res) => {
             INSERT INTO order_item (order_id, product_id, item_quantity, item_price)
             VALUES (?, ?, ?, (SELECT product_price FROM product WHERE product_id = ?))
         `, [order.insertId, productId, quantity, productId]);
-        
+
         if (gcashref) {
             await db.query(`
                 UPDATE orders
@@ -685,8 +686,8 @@ app.post("/quickbuy", async (req, res) => {
 
 // admin dashboard summary
 app.get("/admin/dashboard/summary", async (req, res) => {
-  try {
-    const [[summary]] = await db.query(`
+    try {
+        const [[summary]] = await db.query(`
       SELECT
         COALESCE(SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)), 0) AS revenue,
         COUNT(DISTINCT o.order_id) AS sales,
@@ -697,20 +698,20 @@ app.get("/admin/dashboard/summary", async (req, res) => {
       WHERE o.order_status <> 'cart'
     `);
 
-    const [[customers]] = await db.query(`SELECT COUNT(*) AS customers FROM customer`);
+        const [[customers]] = await db.query(`SELECT COUNT(*) AS customers FROM customer`);
         const [[lowStock]] = await db.query(`SELECT COUNT(*) AS low_stock FROM product WHERE product_stock <= 5`);
 
-    res.json({
-      revenue: summary.revenue,
-      sales: summary.sales,
-      items_sold: summary.items_sold,
-      customers: customers.customers,
-      low_stock: lowStock.low_stock
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch dashboard summary" });
-  }
+        res.json({
+            revenue: summary.revenue,
+            sales: summary.sales,
+            items_sold: summary.items_sold,
+            customers: customers.customers,
+            low_stock: lowStock.low_stock
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch dashboard summary" });
+    }
 });
 
 // Build update clauses for admin edit mode.
@@ -762,9 +763,9 @@ app.get("/admin/customers", async (req, res) => {
 });
 
 app.get("/admin/dashboard/stock-alerts", async (req, res) => {
-  const threshold = Number(req.query.threshold) || 5;
-  try {
-    const [rows] = await db.query(`
+    const threshold = Number(req.query.threshold) || 5;
+    try {
+        const [rows] = await db.query(`
             SELECT p.product_id, p.product_name, p.product_stock, p.product_type, s.supplier_name
             FROM product p
             LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
@@ -772,17 +773,17 @@ app.get("/admin/dashboard/stock-alerts", async (req, res) => {
             ORDER BY p.product_stock ASC, p.product_name
     `, [threshold]);
 
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch stock alerts" });
-  }
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch stock alerts" });
+    }
 });
 
 app.get("/admin/dashboard/top-products", async (req, res) => {
-  const limit = Number(req.query.limit) || 5;
-  try {
-    const [rows] = await db.query(`
+    const limit = Number(req.query.limit) || 5;
+    try {
+        const [rows] = await db.query(`
       SELECT p.product_id, p.product_name,
              SUM(oi.item_quantity) AS units,
              SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)) AS revenue
@@ -795,53 +796,53 @@ app.get("/admin/dashboard/top-products", async (req, res) => {
       LIMIT ?
     `, [limit]);
 
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch top products" });
-  }
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch top products" });
+    }
 });
 
 // inventory report
 app.get("/admin/inventory", async (req, res) => {
-  try {
-    const [rows] = await db.query(`
+    try {
+        const [rows] = await db.query(`
                         SELECT g.goods_id, g.item_name, g.item_stock, g.item_price, g.supplier_id, s.supplier_name
             FROM goods g
             LEFT JOIN supplier s ON s.supplier_id = g.supplier_id
             ORDER BY g.item_stock ASC, g.item_name
     `);
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch inventory" });
-  }
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch inventory" });
+    }
 });
 
 app.post("/admin/inventory", async (req, res) => {
-        const { item_name, item_stock, item_price, supplier_id } = req.body || {};
-        if (!item_name || supplier_id === undefined) {
-                return res.status(400).json({ message: "Missing inventory fields" });
-        }
+    const { item_name, item_stock, item_price, supplier_id } = req.body || {};
+    if (!item_name || supplier_id === undefined) {
+        return res.status(400).json({ message: "Missing inventory fields" });
+    }
 
-        const stock = Number(item_stock);
-        const price = Number(item_price);
-        const supplierId = Number(supplier_id);
-        if (Number.isNaN(stock) || Number.isNaN(price) || Number.isNaN(supplierId)) {
-                return res.status(400).json({ message: "Invalid inventory values" });
-        }
+    const stock = Number(item_stock);
+    const price = Number(item_price);
+    const supplierId = Number(supplier_id);
+    if (Number.isNaN(stock) || Number.isNaN(price) || Number.isNaN(supplierId)) {
+        return res.status(400).json({ message: "Invalid inventory values" });
+    }
 
-        try {
-                const [result] = await db.query(
-                        `INSERT INTO goods (item_name, item_stock, item_price, supplier_id)
+    try {
+        const [result] = await db.query(
+            `INSERT INTO goods (item_name, item_stock, item_price, supplier_id)
                          VALUES (?, ?, ?, ?)`
-                        , [String(item_name).trim(), Math.max(stock, 0), Math.max(price, 0), supplierId]
-                );
-                res.status(201).json({ message: "Inventory item created", id: result.insertId });
-        } catch (err) {
-                console.error(err);
-                res.status(500).json({ message: "Failed to create inventory item" });
-        }
+            , [String(item_name).trim(), Math.max(stock, 0), Math.max(price, 0), supplierId]
+        );
+        res.status(201).json({ message: "Inventory item created", id: result.insertId });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to create inventory item" });
+    }
 });
 
 app.put("/admin/inventory/:goodsId", async (req, res) => {
@@ -884,18 +885,18 @@ app.put("/admin/inventory/:goodsId", async (req, res) => {
 
 // product report
 app.get("/admin/products", async (req, res) => {
-  try {
-    const [rows] = await db.query(`
+    try {
+        const [rows] = await db.query(`
                         SELECT p.product_id, p.product_name, p.product_type, p.product_price, p.product_discount, p.product_stock, p.supplier_id, s.supplier_name
             FROM product p
             LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
             ORDER BY p.product_name
     `);
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch products" });
-  }
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch products" });
+    }
 });
 
 app.put("/admin/products/:productId", async (req, res) => {
@@ -940,9 +941,9 @@ app.put("/admin/products/:productId", async (req, res) => {
 
 // sales report
 app.get("/admin/sales", async (req, res) => {
-  try {
+    try {
         // Aggregated list for admin view
-    const [rows] = await db.query(`
+        const [rows] = await db.query(`
       SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
                          GROUP_CONCAT(CONCAT(p.product_name, ' x', oi.item_quantity)
                              ORDER BY p.product_name SEPARATOR ' | ') AS product_list,
@@ -958,18 +959,18 @@ app.get("/admin/sales", async (req, res) => {
       GROUP BY o.order_id
       ORDER BY o.order_date DESC
     `);
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch sales." });
-  }
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch sales." });
+    }
 });
 
 // orders report
 app.get("/admin/orders", async (req, res) => {
-  try {
+    try {
         // Include an aggregated product list for compact admin table previews.
-    const [rows] = await db.query(`
+        const [rows] = await db.query(`
       SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
                          GROUP_CONCAT(CONCAT(p.product_name, ' x', oi.item_quantity)
                              ORDER BY p.product_name SEPARATOR ' | ') AS product_list,
@@ -982,11 +983,11 @@ app.get("/admin/orders", async (req, res) => {
       GROUP BY o.order_id
       ORDER BY o.order_date DESC
     `);
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch orders." });
-  }
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch orders." });
+    }
 });
 
 // order details for admin modal
@@ -1054,8 +1055,8 @@ app.put("/admin/orders/:orderId/status", async (req, res) => {
 
 // supplier report
 app.get("/admin/suppliers", async (req, res) => {
-  try {
-    const [rows] = await db.query(`
+    try {
+        const [rows] = await db.query(`
       SELECT s.supplier_id, s.supplier_name, s.supplier_number,
              COUNT(DISTINCT g.goods_id) AS goods_count,
              COUNT(DISTINCT p.product_id) AS product_count
@@ -1065,11 +1066,11 @@ app.get("/admin/suppliers", async (req, res) => {
       GROUP BY s.supplier_id
       ORDER BY s.supplier_name
     `);
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch suppliers." });
-  }
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch suppliers." });
+    }
 });
 
 app.put("/admin/suppliers/:supplierId", async (req, res) => {
