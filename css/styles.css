@@ -381,12 +381,10 @@
 	font-family: "Poppins-Medium", Helvetica;
 	font-size: 12px;
 	font-weight: 700;
-	line-height: 1;
 	letter-spacing: 0.2px;
 	background-color: var(--badge-bg, #6b7280);
 	color: #ffffff;
 	white-space: nowrap;
-	text-align: center;
 }
 
 .stock-pill.stock-out {
@@ -1076,7 +1074,12 @@
 	-moz-appearance: none;
 }
 
-
+.admin-edit-mode .dashboard-table-card,
+.admin-edit-mode .stock-alerts,
+.admin-edit-mode .top-selling-products {
+	border-color: #1e88e5;
+	box-shadow: 2px 4px 19px rgba(30, 136, 229, 0.2);
+}
 
 .order-items-summary {
 	display: inline-flex;
@@ -1119,9 +1122,7 @@
 	border-radius: 999px;
 	font-family: "Poppins-Medium", Helvetica;
 	font-size: 12px;
-	line-height: 1;
 	text-transform: capitalize;
-	text-align: center;
 }
 
 .status-pill.pending {
@@ -1279,11 +1280,6 @@
 	display: flex;
 	justify-content: flex-end;
 	margin-top: 20px;
-}
-
-.cart-actions.order-actions {
-	justify-content: center;
-	text-align: center;
 }
 
 .order-total td {
@@ -1539,4 +1535,175 @@
 
 .contact-submit-btn:hover {
 	opacity: 0.95;
+}
+
+
+
+.title-line {
+	justify-content: space-between;
+}
+
+.add-row-btn {
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	min-width: 80px;
+	padding: 6px 12px;
+	border-radius: 4px;
+	border: 0;
+	background-color: #22c55e;
+	color: #ffffff;
+	font-family: "Poppins-Medium", Helvetica;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.2px;
+	cursor: pointer;
+	transition: opacity 0.18s ease;
+	margin-left: 10px;
+	white-space: nowrap;
+}
+
+.add-row-btn:hover {
+	opacity: 0.85;
+}
+
+.add-row-btn[hidden] {
+	display: none;
+}
+
+
+/* ── Edit mode: Delete button per table row ─────────────────────────────────── */
+
+.delete-col-header {
+	width: 48px;
+	min-width: 48px;
+}
+
+.delete-cell {
+	width: 48px;
+	min-width: 48px;
+	text-align: center;
+	padding: 8px 4px !important;
+}
+
+.delete-row-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	border: none;
+	background-color: #ef4444;
+	/* Matched the 'Cancel' badge color */
+	color: #ffffff;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 0.18s ease, transform 0.18s ease;
+	animation: fadeInBtn 0.2s ease;
+}
+
+.delete-row-btn:hover {
+	background-color: #dc2626;
+	/* Slightly darker red for hover */
+	color: #ffffff;
+	transform: scale(1.1);
+}
+
+@keyframes fadeInBtn {
+	from {
+		opacity: 0;
+		transform: scale(0.7);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+
+/* ── Admin Create Modal ──────────────────────────────────────────────────────── */
+
+.admin-create-modal {
+	width: min(480px, 96vw);
+	max-height: min(85vh, 700px);
+}
+
+.admin-create-form {
+	margin-top: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.admin-create-fields {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px 18px;
+}
+
+.admin-create-field {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+/* Full-width for the first field (name) */
+.admin-create-field:first-child {
+	grid-column: 1 / -1;
+}
+
+.admin-create-label {
+	font-family: "Poppins-Medium", Helvetica;
+	font-size: 12px;
+	font-weight: 600;
+	color: #475569;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.admin-create-input {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid #cfd8e3;
+	border-radius: 6px;
+	font-family: "Poppins-Regular", Helvetica;
+	font-size: 13px;
+	color: #10153f;
+	background-color: #f8fafc;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-create-input:focus {
+	outline: none;
+	border-color: #1e88e5;
+	background-color: #ffffff;
+}
+
+.admin-create-actions {
+	display: flex;
+	gap: 10px;
+	margin-top: 22px;
+	justify-content: flex-end;
+}
+
+.admin-create-submit,
+.admin-create-cancel-btn {
+	min-width: 90px;
+}
+
+/* ── Out of stock styles ─────────────────────────────────────────────────────── */
+
+.deal-card.out-of-stock .deal-card-container,
+.item-card.out-of-stock .item-card-container {
+	filter: grayscale(100%);
+	opacity: 0.6;
+}
+
+.out-of-stock-text {
+	color: #dc2626 !important;
+	font-family: "Poppins-Bold", Helvetica;
+	font-size: 0.85em;
 }
