@@ -6,19 +6,19 @@
 setUpUser();
 
 const dashboardRoutes = {
-  Home:             '/store/home.html',
-  Browse:           '/store/browse.html',
-  Cart:             '/store/cart.html',
-  Order:            '/store/order.html',
-  Business:         '/store/business.html'
+	Home: '/store/home.html',
+	Browse: '/store/browse.html',
+	Cart: '/store/cart.html',
+	Order: '/store/order.html',
+	Business: '/store/business.html'
 };
 
 let selectedProductId = null;
 const shippingCost = 5.0;
 
 // create the deals/discount cards (by 3s)
-async function createDealCard(category, items=null, index=0) {
-	
+async function createDealCard(category, items = null, index = 0) {
+
 	let discountedItems = items;
 	const toShow = discountedItems.slice(index, index + 3);
 
@@ -36,11 +36,19 @@ async function createDealCard(category, items=null, index=0) {
 		const imageSource = hasImage ? product.product_image : '/img/home-image.png';
 		const noImageClass = !hasImage ? 'no-image' : '';
 		const gradientContent = '';
-		
-		const priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
 
-		toAdd += 
-		`<div class="deal-card" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
+		let priceText = '';
+		let stockClass = '';
+		if (product.product_stock <= 0) {
+			priceText = `<span class="out-of-stock-text">OUT OF STOCK</span>`;
+			stockClass = 'out-of-stock';
+			discountText = ''; // Hide discount badge if out of stock
+		} else {
+			priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
+		}
+
+		toAdd +=
+			`<div class="deal-card ${stockClass}" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
 			<div class="deal-card-container ${noImageClass}" style="background-image: url('${imageSource}');">
 				<div class="deal-card-gradient">${gradientContent}</div>
 			</div>
@@ -79,11 +87,19 @@ function createItemCard(products, category) {
 		const imageSource = hasImage ? product.product_image : '/img/home-image.png';
 		const noImageClass = !hasImage ? 'no-image' : '';
 		const gradientContent = !hasImage ? '📷' : '';
-		
-		const priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
+
+		let priceText = '';
+		let stockClass = '';
+		if (product.product_stock <= 0) {
+			priceText = `<span class="out-of-stock-text">OUT OF STOCK</span>`;
+			stockClass = 'out-of-stock';
+			discountText = ''; // Hide discount badge if out of stock
+		} else {
+			priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
+		}
 
 		toAdd += `
-		<div class="item-card" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
+		<div class="item-card ${stockClass}" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
 			<div class="item-card-container ${noImageClass}" style="background-image: url('${imageSource}');">
 				<div class="item-card-gradient">${gradientContent}</div>
 			</div>
@@ -165,7 +181,7 @@ if (document.body.id === 'store-home') {
 	// change the category of the items shown
 	async function changeItemCategory(category) {
 		let categories = await getCategories();
-		categories.unshift({name: "All", place: categories[0].place + 1});
+		categories.unshift({ name: "All", place: categories[0].place + 1 });
 		createCategories('.home-items .category-selection', categories);
 		const specificCategory = categories.find((cat) => cat.name == category);
 
@@ -204,7 +220,7 @@ else if (document.body.id === 'store-browse') {
 
 	async function applyBrowseCategoryMarker(category) {
 		const categoryObj = categories.find((cat) => cat.name === category);
-		
+
 		document.querySelector('.home-deals .category-chosen').style.right = `calc(105px + 120px * ${categoryObj.place})`;
 	}
 
@@ -227,7 +243,7 @@ else if (document.body.id === 'store-browse') {
 
 		const dealCards = products.slice(0, 3);
 		createDealCard(currentBrowseCategory, dealCards);
-		createItemCard(products.slice(3), {name: currentBrowseCategory});
+		createItemCard(products.slice(3), { name: currentBrowseCategory });
 		applyBrowseCategoryMarker(currentBrowseCategory);
 	}
 
@@ -239,7 +255,7 @@ else if (document.body.id === 'store-browse') {
 
 	async function initializeStoreBrowse() {
 		categories = await getCategories();
-		categories.unshift({name: "All", place: categories[0].place + 1});
+		categories.unshift({ name: "All", place: categories[0].place + 1 });
 		await changeCategory('All');
 
 		// Add event delegation for the search bar
@@ -263,7 +279,7 @@ else if (document.body.id === 'store-browse') {
 }
 
 else if (document.body.id === 'store-cart') {
-	async function createCartTable(){
+	async function createCartTable() {
 		const userCart = await getCart();
 
 		let rowsHtml = '';
@@ -441,7 +457,7 @@ else if (document.body.id === 'store-order') {
 		const body = document.getElementById('ordersBody');
 		let orders = await getOrders() || [];
 		let temp = [];
-				
+
 		orders.forEach(row => {
 			const {
 				order_id,
@@ -586,10 +602,30 @@ document.addEventListener('DOMContentLoaded', () => {
 			const originalPrice = `<s>₱${formatPrice(Number(card.dataset.productPrice) || 0)}</s>`;
 
 			selectedProductId = card.dataset.productId || null;
+			const stock = Number(card.dataset.productStock) || 0;
+
 			modalTitle.textContent = productName;
-			modalSubtitle.innerHTML = `₱${card.dataset.productDiscount > 0 ? `${discountedPrice} ${originalPrice}` : `${formatPrice(Number(card.dataset.productPrice) || 0)}`}`;
+			if (stock <= 0) {
+				modalSubtitle.innerHTML = `<span class="out-of-stock-text" style="color: #dc2626;">OUT OF STOCK</span>`;
+			} else {
+				modalSubtitle.innerHTML = `₱${card.dataset.productDiscount > 0 ? `${discountedPrice} ${originalPrice}` : `${formatPrice(Number(card.dataset.productPrice) || 0)}`}`;
+			}
 			modalDescription.textContent = productDescription;
 			modalImage.src = imageSource;
+
+			const addCartBtn = cardModalOverlay.querySelector('.modal-action.add-to-cart');
+			const buyNowBtn = cardModalOverlay.querySelector('.modal-action.buy-now');
+			if (addCartBtn) {
+				addCartBtn.disabled = stock <= 0;
+				addCartBtn.style.opacity = stock <= 0 ? "0.5" : "1";
+				addCartBtn.style.cursor = stock <= 0 ? "not-allowed" : "pointer";
+			}
+			if (buyNowBtn) {
+				buyNowBtn.disabled = stock <= 0;
+				buyNowBtn.style.opacity = stock <= 0 ? "0.5" : "1";
+				buyNowBtn.style.cursor = stock <= 0 ? "not-allowed" : "pointer";
+			}
+
 			cardModalOverlay.hidden = false;
 			document.body.style.overflow = 'hidden';
 		}
@@ -634,21 +670,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		const cardsContainer = document.querySelector('.store-background');
 		if (cardsContainer) {
-		cardsContainer.addEventListener('click', (event) => {
-			const card = event.target.closest('.deal-card, .item-card');
-			if (card) {
-			clearSelectedCards();
-			card.classList.add('is-selected');
-			openCardModal(card);
-			}
-		});
+			cardsContainer.addEventListener('click', (event) => {
+				const card = event.target.closest('.deal-card, .item-card');
+				if (card) {
+					clearSelectedCards();
+					card.classList.add('is-selected');
+					openCardModal(card);
+				}
+			});
 		}
 
 		closeButton.addEventListener('click', closeCardModal);
 		cardModalOverlay.addEventListener('click', (event) => {
-		if (event.target === cardModalOverlay) {
-			closeCardModal();
-		}
+			if (event.target === cardModalOverlay) {
+				closeCardModal();
+			}
 		});
 	}
 
@@ -667,15 +703,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		function openPaymentModalForCheckout(checkoutType, data) {
 			checkoutContext = { type: checkoutType, ...data };
-			
+
 			// Reset modal to payment selection view
 			paymentModalOverlay.querySelector('.modal-description').innerHTML = "Choose your preferred payment method.";
 			const modalActions = paymentModalOverlay.querySelector('.modal-actions');
 			const gcashInput = document.getElementById('gcash-reference-input');
-			
+
 			if (modalActions) modalActions.style.display = 'flex';
 			if (gcashInput) gcashInput.style.display = 'none';
-			
+
 			paymentModalOverlay.hidden = false;
 			document.body.style.overflow = 'hidden';
 		}
@@ -684,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (codButton) {
 			codButton.addEventListener('click', async () => {
 				const { type, productId, quantity } = checkoutContext;
-				
+
 				try {
 					let result;
 					if (type === 'quickBuy') {
@@ -694,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						// Cart checkout with COD
 						result = await addOrder(null);
 					}
-					
+
 					if (result) {
 						closePaymentModal();
 					}
@@ -712,30 +748,30 @@ document.addEventListener('DOMContentLoaded', () => {
 				paymentModalOverlay.querySelector('.modal-description').innerHTML = "Please input your GCASH payment reference code:";
 				const modalActions = paymentModalOverlay.querySelector('.modal-actions');
 				const gcashInput = document.getElementById('gcash-reference-input');
-				
+
 				if (modalActions) modalActions.style.display = 'none';
 				if (gcashInput) {
 					gcashInput.style.display = 'flex';
 					gcashInput.hidden = false;
 				}
-				
+
 				// Get the input field and submit button
 				const refInput = gcashInput?.querySelector('input');
 				const submitBtn = gcashInput?.querySelector('button');
-				
+
 				if (refInput && submitBtn) {
 					refInput.value = ''; // Clear previous value
 					refInput.focus();
-					
+
 					const handleGcashSubmit = async () => {
 						const gcashReference = refInput.value.trim();
 						if (!gcashReference) {
 							alert('Please enter a GCASH reference code.');
 							return;
 						}
-						
+
 						const { type, productId, quantity } = checkoutContext;
-						
+
 						try {
 							let result;
 							if (type === 'quickBuy') {
@@ -745,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
 								// Cart checkout with GCASH reference
 								result = await addOrder(gcashReference);
 							}
-							
+
 							if (result) {
 								closePaymentModal();
 							}
@@ -754,7 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
 							alert('Could not complete order.');
 						}
 					};
-					
+
 					submitBtn.onclick = handleGcashSubmit;
 					refInput.addEventListener('keydown', (e) => {
 						if (e.key === 'Enter') {
