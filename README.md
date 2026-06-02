@@ -23,14 +23,6 @@ Orders and Sales can easily just be tracked and managed in real time.
 * **Order Management**: Track orders, adjust order statuses (Pending, Processing, Completed), and review customer order history.
 * **Role-Based Access**: Distinct login pathways and workflows for both customers and employees (admins).
 
-## Tech Stack
-
-* **Backend**: Node.js, Express.js
-* **Database**: MySQL (using `mysql2`, designed to be run with XAMPP)
-* **Authentication**: `bcrypt` for secure password hashing
-* **Frontend**: HTML5, CSS3, Vanilla JavaScript (with a responsive, dynamic UI)
-* **Environment Management**: `dotenv` for configuration
-
 ## Project Structure
 
 * `server.js`: Main Express server for routing, REST API endpoints and db connections.
