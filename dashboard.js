@@ -32,10 +32,21 @@ function parseProductList(value) {
     .filter(Boolean);
 }
 
-// Edit mode edits through id
 const EDIT_MODE_STORAGE_KEY = "adminEditMode";
 const editBuffer = new Map();
 let editModeEnabled = false;
+let cachedSuppliers = null;
+
+async function fetchSupplierList() {
+  if (cachedSuppliers) return cachedSuppliers;
+  try {
+    const rows = await fetchJson("/admin/suppliers");
+    cachedSuppliers = rows.map(s => ({ id: s.supplier_id, name: s.supplier_name }));
+  } catch (e) {
+    cachedSuppliers = [];
+  }
+  return cachedSuppliers;
+}
 
 function getEditModeControls() {
   return {
@@ -76,6 +87,17 @@ function updateEditModeControls() {
   if (save) {
     save.disabled = editBuffer.size === 0;
   }
+  // Show/hide add-new buttons
+  document.querySelectorAll(".add-row-btn").forEach(btn => {
+    btn.hidden = !editModeEnabled;
+  });
+  // Show/hide delete buttons
+  document.querySelectorAll(".delete-row-btn").forEach(btn => {
+    btn.closest("td")?.style && (btn.closest("td").style.display = editModeEnabled ? "" : "none");
+  });
+  document.querySelectorAll(".delete-col-header").forEach(th => {
+    th.style.display = editModeEnabled ? "" : "none";
+  });
 }
 
 function enterEditMode() {
@@ -159,6 +181,23 @@ function setEditModeEnabled(nextState, options = {}) {
   editModeEnabled = Boolean(nextState);
   localStorage.setItem(EDIT_MODE_STORAGE_KEY, editModeEnabled ? "on" : "off");
   applyEditModeToPage(options);
+
+  // When entering edit mode put up delete buttons on existing rows
+  if (editModeEnabled) {
+    ["inventoryBody", "productsBody", "suppliersBody"].forEach(id => {
+      const tbody = document.getElementById(id);
+      if (tbody) {
+        ensureDeleteHeader(tbody);
+        bindDeleteButtons(tbody);
+      }
+    });
+  } else {
+    // Remove delete column when exiting
+    ["inventoryBody", "productsBody", "suppliersBody"].forEach(id => {
+      const tbody = document.getElementById(id);
+      if (tbody) removeDeleteColumns(tbody);
+    });
+  }
 }
 
 function clearEditBuffer() {
@@ -282,6 +321,280 @@ async function saveEditModeChanges() {
 function cancelEditModeChanges() {
   clearEditBuffer();
   setEditModeEnabled(false, { discardChanges: true });
+}
+
+// Create modal. Orders/Sales unsupported, considering to add for accounting for physical orders.
+
+function getOrCreateModal() {
+  let overlay = document.getElementById("adminCreateModalOverlay");
+  if (overlay) return overlay;
+
+  overlay = document.createElement("div");
+  overlay.id = "adminCreateModalOverlay";
+  overlay.className = "card-modal-overlay";
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="card-modal admin-create-modal" role="dialog" aria-modal="true" aria-labelledby="adminCreateModalTitle">
+      <button type="button" class="modal-close" id="adminCreateModalClose" aria-label="Close">&times;</button>
+      <h2 class="modal-title" id="adminCreateModalTitle">Add New</h2>
+      <form id="adminCreateForm" class="admin-create-form" novalidate autocomplete="off">
+        <div id="adminCreateFormFields" class="admin-create-fields"></div>
+        <div class="admin-create-actions">
+          <button type="submit" class="edit-save admin-create-submit">Create</button>
+          <button type="button" class="edit-cancel admin-create-cancel-btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => { overlay.hidden = true; document.body.style.overflow = ""; };
+  overlay.querySelector("#adminCreateModalClose").addEventListener("click", close);
+  overlay.querySelector(".admin-create-cancel-btn").addEventListener("click", close);
+  overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+
+  return overlay;
+}
+
+function buildField(id, label, type = "text", opts = {}) {
+  const req = opts.required ? "required" : "";
+  const min = opts.min != null ? `min="${opts.min}"` : "";
+  const max = opts.max != null ? `max="${opts.max}"` : "";
+  const step = opts.step != null ? `step="${opts.step}"` : "";
+  const placeholder = opts.placeholder ? `placeholder="${opts.placeholder}"` : "";
+  return `
+    <div class="admin-create-field">
+      <label class="admin-create-label" for="${id}">${label}</label>
+      <input class="edit-input admin-create-input" type="${type}" id="${id}" name="${id}" ${req} ${min} ${max} ${step} ${placeholder} />
+    </div>
+  `;
+}
+
+function buildSelectField(id, label, options, required = false) {
+  const opts = options.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+  const req = required ? "required" : "";
+  return `
+    <div class="admin-create-field">
+      <label class="admin-create-label" for="${id}">${label}</label>
+      <select class="edit-input admin-create-input" id="${id}" name="${id}" ${req}>
+        <option value="">-- Select --</option>
+        ${opts}
+      </select>
+    </div>
+  `;
+}
+
+async function openCreateModal(entity) {
+  const overlay = getOrCreateModal();
+  const title = overlay.querySelector("#adminCreateModalTitle");
+  const fieldsEl = overlay.querySelector("#adminCreateFormFields");
+  const form = overlay.querySelector("#adminCreateForm");
+
+  // Remove old submit listener
+  const newForm = form.cloneNode(true);
+  form.parentNode.replaceChild(newForm, form);
+  const liveForm = overlay.querySelector("#adminCreateForm");
+  // Re-bind close buttons on the new form
+  overlay.querySelector(".admin-create-cancel-btn").addEventListener("click", () => {
+    overlay.hidden = true; document.body.style.overflow = "";
+  });
+
+  const liveFields = overlay.querySelector("#adminCreateFormFields");
+
+  const suppliers = await fetchSupplierList();
+  const supplierOpts = suppliers.map(s => ({ value: s.id, label: s.name }));
+
+  let entityLabel = "";
+  let endpoint = "";
+  let buildPayload;
+
+  if (entity === "inventory") {
+    entityLabel = "Inventory Item";
+    endpoint = "/admin/inventory";
+    liveFields.innerHTML = [
+      buildField("cf_item_name", "Goods Name", "text", { required: true, placeholder: "e.g. Cotton Fabric" }),
+      buildField("cf_item_stock", "Stock", "number", { required: true, min: 0, step: 1, placeholder: "0" }),
+      buildField("cf_item_price", "Price (₱)", "number", { required: true, min: 0, step: 0.01, placeholder: "0.00" }),
+      supplierOpts.length ? buildSelectField("cf_supplier_id", "Supplier", supplierOpts, true) : buildField("cf_supplier_id", "Supplier ID", "number", { required: true, min: 1 })
+    ].join("");
+    buildPayload = () => ({
+      item_name: liveFields.querySelector("#cf_item_name").value.trim(),
+      item_stock: Number(liveFields.querySelector("#cf_item_stock").value),
+      item_price: Number(liveFields.querySelector("#cf_item_price").value),
+      supplier_id: Number(liveFields.querySelector("#cf_supplier_id").value)
+    });
+  } else if (entity === "products") {
+    entityLabel = "Product";
+    endpoint = "/admin/products";
+    liveFields.innerHTML = [
+      buildField("cf_product_name", "Product Name", "text", { required: true, placeholder: "e.g. Silk Blouse" }),
+      buildField("cf_product_type", "Type", "text", { placeholder: "e.g. bundle / single" }),
+      buildField("cf_product_image", "Image URL", "text", { placeholder: "e.g. https://elementarypos.com/wp-content/uploads/2024/08/shutterstock_390323746-a.png" }),
+      buildField("cf_product_stock", "Stock", "number", { required: true, min: 0, step: 1, placeholder: "0" }),
+      buildField("cf_product_price", "Price (₱)", "number", { required: true, min: 0, step: 0.01, placeholder: "0.00" }),
+      buildField("cf_product_discount", "Discount (%)", "number", { min: 0, max: 100, step: 0.01, placeholder: "0" }),
+      supplierOpts.length ? buildSelectField("cf_supplier_id", "Supplier", supplierOpts) : buildField("cf_supplier_id", "Supplier ID", "number", { min: 1 })
+    ].join("");
+    buildPayload = () => ({
+      product_name: liveFields.querySelector("#cf_product_name").value.trim(),
+      product_type: liveFields.querySelector("#cf_product_type").value.trim(),
+      product_image: liveFields.querySelector("#cf_product_image").value.trim(),
+      product_stock: Number(liveFields.querySelector("#cf_product_stock").value),
+      product_price: Number(liveFields.querySelector("#cf_product_price").value),
+      product_discount: Number(liveFields.querySelector("#cf_product_discount").value) || 0,
+      supplier_id: liveFields.querySelector("#cf_supplier_id").value ? Number(liveFields.querySelector("#cf_supplier_id").value) : null
+    });
+  } else if (entity === "suppliers") {
+    entityLabel = "Supplier";
+    endpoint = "/admin/suppliers";
+    liveFields.innerHTML = [
+      buildField("cf_supplier_name", "Supplier Name", "text", { required: true, placeholder: "e.g. ABC Textiles" }),
+      buildField("cf_supplier_number", "Contact Number", "text", { placeholder: "e.g. 09171234567" })
+    ].join("");
+    buildPayload = () => ({
+      supplier_name: liveFields.querySelector("#cf_supplier_name").value.trim(),
+      supplier_number: liveFields.querySelector("#cf_supplier_number").value.trim()
+    });
+  } else {
+    return;
+  }
+
+  title.textContent = `Add New ${entityLabel}`;
+  overlay.hidden = false;
+  document.body.style.overflow = "hidden";
+
+  liveForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const submitBtn = liveForm.querySelector(".admin-create-submit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving...";
+
+    try {
+      const payload = buildPayload();
+      const res = await fetch(`${ADMIN_API_BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || `Create failed (${res.status})`);
+      }
+
+      // Invalidate supplier cache on new supplier
+      if (entity === "suppliers") cachedSuppliers = null;
+
+      overlay.hidden = true;
+      document.body.style.overflow = "";
+      await refreshAdminTables();
+    } catch (err) {
+      console.error(err);
+      alert(`Could not create record: ${err.message}`);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create";
+    }
+  });
+}
+
+// Row delete
+
+async function deleteAdminRow(entity, id, rowEl) {
+  const entityLabel = { inventory: "inventory item", products: "product", suppliers: "supplier" }[entity] || entity;
+  if (!window.confirm(`Delete this ${entityLabel}? This cannot be undone.`)) return;
+
+  let endpoint = "";
+  if (entity === "inventory") endpoint = `/admin/inventory/${id}`;
+  else if (entity === "products") endpoint = `/admin/products/${id}`;
+  else if (entity === "suppliers") endpoint = `/admin/suppliers/${id}`;
+  else return;
+
+  try {
+    const res = await fetch(`${ADMIN_API_BASE}${endpoint}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || `Delete failed (${res.status})`);
+    }
+    // Invalidate supplier cache
+    if (entity === "suppliers") cachedSuppliers = null;
+    // Cool animation
+    rowEl.style.transition = "opacity 0.25s ease, transform 0.25s ease";
+    rowEl.style.opacity = "0";
+    rowEl.style.transform = "translateX(12px)";
+    setTimeout(() => rowEl.remove(), 260);
+  } catch (err) {
+    console.error(err);
+    alert(`Could not delete: ${err.message}`);
+  }
+}
+
+function initAddNewButtons() {
+  // For each tbody with a known entity, add a button to the nearest .title-line if not already added
+  const entityMap = {
+    inventoryBody: "inventory",
+    productsBody: "products",
+    suppliersBody: "suppliers"
+  };
+
+  Object.entries(entityMap).forEach(([tbodyId, entity]) => {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const card = tbody.closest(".dashboard-table-card");
+    if (!card) return;
+    const titleLine = card.querySelector(".title-line");
+    if (!titleLine || titleLine.querySelector(".add-row-btn")) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "add-row-btn";
+    btn.textContent = "+ Add New";
+    btn.setAttribute("data-entity", entity);
+    btn.hidden = !editModeEnabled;
+    btn.addEventListener("click", () => openCreateModal(entity));
+    titleLine.appendChild(btn);
+  });
+}
+
+function bindDeleteButtons(tbody) {
+  tbody.querySelectorAll("tr[data-entity][data-id]").forEach(row => {
+    if (row.querySelector(".delete-row-btn")) return;
+    const entity = row.dataset.entity;
+    if (!["inventory", "products", "suppliers"].includes(entity)) return;
+
+    const lastTd = row.lastElementChild;
+    const td = document.createElement("td");
+    td.className = "delete-cell";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "delete-row-btn";
+    btn.innerHTML = "&times;";
+    btn.title = "Delete row";
+    btn.setAttribute("aria-label", "Delete row");
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteAdminRow(entity, row.dataset.id, row);
+    });
+    td.appendChild(btn);
+    row.appendChild(td);
+  });
+}
+
+//  Header cell for delete column
+function ensureDeleteHeader(tbody) {
+  const thead = tbody.closest("table")?.querySelector("thead tr");
+  if (!thead || thead.querySelector(".delete-col-header")) return;
+  const th = document.createElement("th");
+  th.className = "delete-col-header";
+  th.textContent = "";
+  thead.appendChild(th);
+}
+
+function removeDeleteColumns(tbody) {
+  tbody.querySelectorAll(".delete-cell").forEach(td => td.remove());
+  tbody.querySelectorAll(".delete-row-btn").forEach(btn => btn.closest("td")?.remove());
+  const thead = tbody.closest("table")?.querySelector("thead tr");
+  if (thead) thead.querySelector(".delete-col-header")?.remove();
 }
 
 function initEditModeControls() {
@@ -685,8 +998,8 @@ async function loadDashboardHome() {
 
   function stockBadge(qty) {
     if (qty === 0) return `<span class="stock-pill stock-out">Out of Stock</span>`;
-    if (qty <= 3)  return `<span class="stock-pill stock-critical">${qty}</span>`;
-    return             `<span class="stock-pill stock-low">${qty}</span>`;
+    if (qty <= 3) return `<span class="stock-pill stock-critical">${qty}</span>`;
+    return `<span class="stock-pill stock-low">${qty}</span>`;
   }
 
   document.getElementById("stockAlertsBody").innerHTML = stockRows.length
@@ -712,7 +1025,8 @@ async function loadDashboardHome() {
 
 async function loadInventory() {
   const rows = await fetchJson("/admin/inventory");
-  document.getElementById("inventoryBody").innerHTML = rows.map((row) => {
+  const tbody = document.getElementById("inventoryBody");
+  tbody.innerHTML = rows.map((row) => {
     const stock = Number(row.item_stock) || 0;
     const price = Number(row.item_price) || 0;
     return `
@@ -726,6 +1040,10 @@ async function loadInventory() {
   `;
   }).join("");
   applyEditModeToPage({ discardChanges: false });
+  if (editModeEnabled) {
+    ensureDeleteHeader(tbody);
+    bindDeleteButtons(tbody);
+  }
 }
 
 async function loadProducts() {
@@ -742,6 +1060,9 @@ async function loadProducts() {
       <tr data-entity="products" data-id="${row.product_id}">
         <td>${row.product_id}</td>
         <td data-editable="true" data-field="product_name" data-type="text">${row.product_name}</td>
+        <td class="text-center">
+            <button type="button" class="view-image-btn" style="padding: 2px 8px; font-size: 0.85em;" data-url="${row.product_image || ""}" data-id="${row.product_id}">View / Edit</button>
+        </td>
         <td data-editable="true" data-field="product_type" data-type="text">${row.product_type || ""}</td>
         <td class="text-center" data-editable="true" data-field="product_stock" data-type="number" data-value="${stock}">${stock}</td>
         <td class="text-right" data-editable="true" data-field="product_price" data-type="currency" data-value="${price}">${formatCurrency(price)}</td>
@@ -755,6 +1076,10 @@ async function loadProducts() {
       body.innerHTML = `<tr><td colspan="7" class="text-center">No products found.</td></tr>`;
     }
     applyEditModeToPage({ discardChanges: false });
+    if (editModeEnabled) {
+      ensureDeleteHeader(body);
+      bindDeleteButtons(body);
+    }
     return rows;
   } catch (err) {
     console.error('Products load failed:', err);
@@ -762,6 +1087,38 @@ async function loadProducts() {
     return [];
   }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const productsBody = document.getElementById("productsBody");
+  if (productsBody) {
+    productsBody.addEventListener("click", (e) => {
+      const btn = e.target.closest(".view-image-btn");
+      if (!btn) return;
+      const currentUrl = btn.dataset.url;
+      if (editModeEnabled) {
+        const newUrl = prompt("Enter new image URL (or path):", currentUrl);
+        if (newUrl !== null) {
+          btn.dataset.url = newUrl;
+          const row = btn.closest("tr");
+          const entity = row.dataset.entity;
+          const id = row.dataset.id;
+          const key = `${entity}:${id}`;
+          if (!editBuffer.has(key)) {
+            editBuffer.set(key, { entity, id, fields: {} });
+          }
+          editBuffer.get(key).fields["product_image"] = newUrl;
+          updateEditModeControls();
+        }
+      } else {
+        if (currentUrl && currentUrl.trim() !== "") {
+          window.open(currentUrl, "_blank");
+        } else {
+          alert("No image URL provided.");
+        }
+      }
+    });
+  }
+});
 
 async function loadSales() {
   const rows = await fetchJson("/admin/sales");
@@ -809,8 +1166,10 @@ async function loadOrders() {
 }
 
 async function loadSuppliers() {
+  const body = document.getElementById("suppliersBody");
+  if (!body) return;
   const rows = await fetchJson("/admin/suppliers");
-  document.getElementById("suppliersBody").innerHTML = rows.map(row => `
+  body.innerHTML = rows.map(row => `
     <tr data-entity="suppliers" data-id="${row.supplier_id}">
       <td>${row.supplier_id}</td>
       <td data-editable="true" data-field="supplier_name" data-type="text">${row.supplier_name}</td>
@@ -820,6 +1179,10 @@ async function loadSuppliers() {
     </tr>
   `).join("");
   applyEditModeToPage({ discardChanges: false });
+  if (editModeEnabled) {
+    ensureDeleteHeader(body);
+    bindDeleteButtons(body);
+  }
 }
 
 window.loadProducts = loadProducts;
@@ -840,25 +1203,26 @@ async function initDashboard() {
   initAdminDropdownFallback();
   initSortableTables();
   initAdminOrderDetails();
+  initAddNewButtons();
 
   if (document.getElementById("dashboardRevenue")) {
-  try { await loadDashboardHome(); } catch(e) { console.error('Dashboard load failed:', e); }
-}
-if (document.getElementById("inventoryBody")) {
-  try { await loadInventory(); } catch(e) { console.error('Inventory load failed:', e); }
-}
-if (document.getElementById("productsBody")) {
-  try { await loadProducts(); } catch(e) { console.error('Products load failed:', e); }
-}
-if (document.getElementById("salesBody")) {
-  try { await loadSales(); } catch(e) { console.error('Sales load failed:', e); }
-}
-if (document.getElementById("ordersBody")) {
-  try { await loadOrders(); } catch(e) { console.error('Orders load failed:', e); }
-}
-if (document.getElementById("suppliersBody")) {
-  try { await loadSuppliers(); } catch(e) { console.error('Suppliers load failed:', e); }
-}
+    try { await loadDashboardHome(); } catch (e) { console.error('Dashboard load failed:', e); }
+  }
+  if (document.getElementById("inventoryBody")) {
+    try { await loadInventory(); } catch (e) { console.error('Inventory load failed:', e); }
+  }
+  if (document.getElementById("productsBody")) {
+    try { await loadProducts(); } catch (e) { console.error('Products load failed:', e); }
+  }
+  if (document.getElementById("salesBody")) {
+    try { await loadSales(); } catch (e) { console.error('Sales load failed:', e); }
+  }
+  if (document.getElementById("ordersBody")) {
+    try { await loadOrders(); } catch (e) { console.error('Orders load failed:', e); }
+  }
+  if (document.getElementById("suppliersBody")) {
+    try { await loadSuppliers(); } catch (e) { console.error('Suppliers load failed:', e); }
+  }
 
   const productsBody = document.getElementById("productsBody");
   if (productsBody && !productsBody.innerHTML.trim()) {

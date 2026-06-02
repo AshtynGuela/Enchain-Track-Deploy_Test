@@ -577,7 +577,7 @@ app.post("/orders/:userId/:gcashref", async (req, res) => {
 		if (!uExists) { return res.status(404).json({ message: "User not found" }); }
 
         const [[cartExists]] = await db.query(
-            `SELECT 1 FROM orders WHERE customer_id = ? AND order_status = 'cart' LIMIT 1`,
+            `SELECT order_id FROM orders WHERE customer_id = ? AND order_status = 'cart' LIMIT 1`,
             [userId]
         );
 
@@ -886,7 +886,7 @@ app.put("/admin/inventory/:goodsId", async (req, res) => {
 app.get("/admin/products", async (req, res) => {
   try {
     const [rows] = await db.query(`
-                        SELECT p.product_id, p.product_name, p.product_type, p.product_price, p.product_discount, p.product_stock, p.supplier_id, s.supplier_name
+                        SELECT p.product_id, p.product_name, p.product_image, p.product_type, p.product_price, p.product_discount, p.product_stock, p.supplier_id, s.supplier_name
             FROM product p
             LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
             ORDER BY p.product_name
@@ -896,6 +896,54 @@ app.get("/admin/products", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch products" });
   }
+});
+
+app.post("/admin/products", async (req, res) => {
+    const { product_name, product_type, product_stock, product_price, product_discount, supplier_id, product_image } = req.body || {};
+    if (!product_name) {
+        return res.status(400).json({ message: "Missing product_name" });
+    }
+
+    const stock = Number(product_stock) || 0;
+    const price = Number(product_price) || 0;
+    const discount = Math.min(Math.max(Number(product_discount) || 0, 0), 100);
+    const supplierId = supplier_id != null ? Number(supplier_id) : null;
+    const image = product_image ? String(product_image).trim() : null;
+
+    try {
+        const [result] = await db.query(
+            `INSERT INTO product (product_name, product_type, product_stock, product_price, product_discount, supplier_id, product_image)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [String(product_name).trim(), String(product_type || "").trim(), Math.max(stock, 0), Math.max(price, 0), discount, supplierId, image]
+        );
+        res.status(201).json({ message: "Product created", id: result.insertId });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to create product" });
+    }
+});
+
+app.delete("/admin/products/:productId", async (req, res) => {
+    const { productId } = req.params;
+    if (!productId) {
+        return res.status(400).json({ message: "Missing productId" });
+    }
+
+    try {
+        const [result] = await db.query(
+            `DELETE FROM product WHERE product_id = ?`,
+            [productId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        res.json({ message: "Product deleted." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to delete product" });
+    }
 });
 
 app.put("/admin/products/:productId", async (req, res) => {
@@ -909,7 +957,8 @@ app.put("/admin/products/:productId", async (req, res) => {
         product_type: { column: "product_type", type: "text" },
         product_stock: { column: "product_stock", type: "number", min: 0 },
         product_price: { column: "product_price", type: "number", min: 0 },
-        product_discount: { column: "product_discount", type: "number", min: 0, max: 100 }
+        product_discount: { column: "product_discount", type: "number", min: 0, max: 100 },
+        product_image: { column: "product_image", type: "text" }
     });
 
     if (invalid) {
@@ -1070,6 +1119,47 @@ app.get("/admin/suppliers", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch suppliers." });
   }
+});
+
+app.post("/admin/suppliers", async (req, res) => {
+    const { supplier_name, supplier_number } = req.body || {};
+    if (!supplier_name) {
+        return res.status(400).json({ message: "Missing supplier_name" });
+    }
+
+    try {
+        const [result] = await db.query(
+            `INSERT INTO supplier (supplier_name, supplier_number) VALUES (?, ?)`,
+            [String(supplier_name).trim(), String(supplier_number || "").trim()]
+        );
+        res.status(201).json({ message: "Supplier created", id: result.insertId });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to create supplier" });
+    }
+});
+
+app.delete("/admin/suppliers/:supplierId", async (req, res) => {
+    const { supplierId } = req.params;
+    if (!supplierId) {
+        return res.status(400).json({ message: "Missing supplierId" });
+    }
+
+    try {
+        const [result] = await db.query(
+            `DELETE FROM supplier WHERE supplier_id = ?`,
+            [supplierId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Supplier not found" });
+        }
+
+        res.json({ message: "Supplier deleted." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to delete supplier" });
+    }
 });
 
 app.put("/admin/suppliers/:supplierId", async (req, res) => {
