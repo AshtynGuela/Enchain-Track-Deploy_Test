@@ -1144,9 +1144,8 @@ async function loadSales() {
   const rows = await fetchJson("/admin/sales");
   document.getElementById("salesBody").innerHTML = rows.map(row => {
     const paymentType = String(row.transaction_type || '').toLowerCase();
-    const ref = row.gcash_reference ? String(row.gcash_reference).trim() : '';
     const paymentBadge = paymentType === 'g'
-      ? `<span class="payment-badge payment-gcash">GCash</span>${ref ? `<br><span class="payment-ref">${ref}</span>` : ''}`
+      ? '<span class="payment-badge payment-gcash">GCash</span>'
       : '<span class="payment-badge payment-onhand">On Hand</span>';
     return `
     <tr class="admin-order-row" data-order-id="${row.order_id}" data-entity="orders" data-id="${row.order_id}">
