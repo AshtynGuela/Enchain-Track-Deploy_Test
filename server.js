@@ -1020,11 +1020,13 @@ app.get("/admin/sales", async (req, res) => {
                          SUM(oi.item_quantity) AS items,
                          SUM(oi.item_quantity * p.product_price) AS gross,
                          SUM(oi.item_quantity * p.product_price * (p.product_discount / 100)) AS discount,
-                         SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)) AS total
+                         SUM(oi.item_quantity * p.product_price * (1 - p.product_discount / 100)) AS total,
+                         g.gcash_reference
       FROM orders o
       JOIN order_item oi ON o.order_id = oi.order_id
       JOIN product p ON p.product_id = oi.product_id
       LEFT JOIN customer c ON c.customer_id = o.customer_id
+      LEFT JOIN gcash g ON g.Gorder_id = o.order_id
       WHERE o.order_status <> 'cart'
       GROUP BY o.order_id
       ORDER BY o.order_date DESC
@@ -1069,13 +1071,14 @@ app.get("/admin/orders/:orderId/details", async (req, res) => {
 
     try {
         const [rows] = await db.query(`
-            SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
+            SELECT o.order_id, o.order_date, o.order_status, o.transaction_type, c.customer_name,
                          p.product_name, p.product_description, p.product_price, p.product_discount,
-                         oi.item_quantity
+                         oi.item_quantity, g.gcash_reference
             FROM orders o
             JOIN order_item oi ON o.order_id = oi.order_id
             JOIN product p ON p.product_id = oi.product_id
             LEFT JOIN customer c ON c.customer_id = o.customer_id
+            LEFT JOIN gcash g ON g.Gorder_id = o.order_id
             WHERE o.order_id = ?
             AND o.order_status <> 'cart'
             ORDER BY p.product_name

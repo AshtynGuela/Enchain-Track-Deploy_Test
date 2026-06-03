@@ -684,6 +684,8 @@ async function fetchAdminOrderDetails(orderId) {
     order_id: base.order_id,
     order_date: base.order_date,
     order_status: base.order_status,
+    transaction_type: base.transaction_type || '',
+    gcash_reference: base.gcash_reference || '',
     customer_name: base.customer_name || "",
     items
   };
@@ -756,6 +758,24 @@ async function openAdminOrderDetails(orderId) {
     if (discountEl) discountEl.textContent = `-${formatCurrency(totals.discountTotal)}`;
     if (shippingEl) shippingEl.textContent = formatCurrency(totals.shipping);
     if (totalEl) totalEl.textContent = formatCurrency(totals.total);
+
+    // Inject payment method row into modal actions
+    const actionsEl = overlay.querySelector(".modal-actions.order-detail-totals");
+    if (actionsEl) {
+      let paymentRowEl = actionsEl.querySelector(".order-detail-payment");
+      if (!paymentRowEl) {
+        paymentRowEl = document.createElement("div");
+        paymentRowEl.className = "order-detail-row order-detail-payment";
+        actionsEl.insertBefore(paymentRowEl, actionsEl.firstChild);
+      }
+      const paymentType = String(order.transaction_type || '').toLowerCase();
+      const ref = order.gcash_reference ? String(order.gcash_reference).trim() : '';
+      if (paymentType === 'g') {
+        paymentRowEl.innerHTML = `<span>Payment</span><strong><span class="payment-badge payment-gcash" style="font-size:10px;">GCash</span>${ref ? ` <span class="payment-ref">${ref}</span>` : ''}</strong>`;
+      } else {
+        paymentRowEl.innerHTML = `<span>Payment</span><strong><span class="payment-badge payment-onhand" style="font-size:10px;">On Hand</span></strong>`;
+      }
+    }
   } catch (err) {
     console.error(err);
     overlay.hidden = true;
@@ -1124,8 +1144,9 @@ async function loadSales() {
   const rows = await fetchJson("/admin/sales");
   document.getElementById("salesBody").innerHTML = rows.map(row => {
     const paymentType = String(row.transaction_type || '').toLowerCase();
+    const ref = row.gcash_reference ? String(row.gcash_reference).trim() : '';
     const paymentBadge = paymentType === 'g'
-      ? '<span class="payment-badge payment-gcash">GCash</span>'
+      ? `<span class="payment-badge payment-gcash">GCash</span>${ref ? `<br><span class="payment-ref">${ref}</span>` : ''}`
       : '<span class="payment-badge payment-onhand">On Hand</span>';
     return `
     <tr class="admin-order-row" data-order-id="${row.order_id}" data-entity="orders" data-id="${row.order_id}">

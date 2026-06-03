@@ -438,6 +438,16 @@
 	background-color: #16a34a;
 }
 
+.payment-ref {
+	display: block;
+	font-family: "Courier New", Courier, monospace;
+	font-size: 10px;
+	color: #4b5563;
+	letter-spacing: 0.4px;
+	margin-top: 3px;
+	word-break: break-all;
+}
+
 /* Count badge next to the Stock Alert title */
 .stock-alert-count {
 	display: inline-flex;
