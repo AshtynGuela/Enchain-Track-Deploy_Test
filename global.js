@@ -181,9 +181,16 @@ async function addToCart(productId, quantity) {
 			method: 'POST',
 			headers: {'Content-Type': 'application/json'}
 		});
-		return await response.json();
+		const result = await response.json();
+		if (response.ok) {
+			return result;
+		} else {
+			alert(result.message || "Failed to add item to cart.");
+			return null;
+		}
 	} catch (err) {
 		console.error("Error adding item to cart:", err);
+		return null;
 	}
 }
 
@@ -205,15 +212,22 @@ async function updateCart(productId, quantity) {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' }
 		});
-		return await response.json();
+		const result = await response.json();
+		if (response.ok) {
+			return result;
+		} else {
+			alert(result.message || "Failed to update cart.");
+			return null;
+		}
 	} catch (err) {
 		console.error("Error updating item in cart:", err);
+		return null;
   }
 }
 
 async function quickBuy(productId, quantity, gcashref=null) {
 	try {
-		const quickCart = await fetch(`${API_BASE_URL}/quickbuy`, {
+		const response = await fetch(`${API_BASE_URL}/quickbuy`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -223,10 +237,18 @@ async function quickBuy(productId, quantity, gcashref=null) {
 				gcashref
 			})
 		});
-		
-		return await quickCart.json();
+		const result = await response.json();
+		if (response.ok) {
+			alert("Order created successfully!");
+			window.location.href = '/store/order.html';
+			return result;
+		} else {
+			alert(result.message || "Failed to place order.");
+			return null;
+		}
 	} catch (err) {
 		console.error('Error creating order:', err);
+		return null;
 	}
 }
 
@@ -248,12 +270,17 @@ async function addOrder(gcashref=null) {
 			headers: { 'Content-Type': 'application/json' }
 		});
 		const result = await response.json();
-		if (result) {
+		if (response.ok) {
+			alert("Order created successfully!");
 			window.location.href = '/store/order.html';
+			return result;
+		} else {
+			alert(result.message || "Failed to place order.");
+			return null;
 		}
-		return result;
 	} catch (err) {
 		console.error('Error creating order:', err);
+		return null;
 	}
 }
 

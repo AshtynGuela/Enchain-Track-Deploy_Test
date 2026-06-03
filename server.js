@@ -330,6 +330,8 @@ app.post("/cart/:userId/:productId/:quantity", async (req, res) => {
         const pExists = await productExists(productId);
         if (!pExists) { return res.status(404).json({ message: "Product not found" }); }
 
+        const [[product]] = await db.query(`SELECT product_stock FROM product WHERE product_id = ?`, [productId]);
+
         // Check existing cart
         let [cartRows] = await db.query(
             `SELECT order_id
@@ -363,13 +365,30 @@ app.post("/cart/:userId/:productId/:quantity", async (req, res) => {
             orderId = cartRows[0].order_id;
         }
 
+        let existingQty = 0;
+        if (cartRows.length > 0) {
+            const [itemRows] = await db.query(
+                `SELECT item_quantity FROM order_item WHERE order_id = ? AND product_id = ?`,
+                [orderId, productId]
+            );
+            if (itemRows.length > 0) {
+                existingQty = Number(itemRows[0].item_quantity) || 0;
+            }
+        }
+
+        const addQty = Number(quantity) || 1;
+        if (addQty <= 0) { return res.status(400).json({ message: "Quantity must be at least 1." }); }
+        if (existingQty + addQty > product.product_stock) {
+            return res.status(400).json({ message: `Insufficient stock. Only ${product.product_stock} items left in stock.` });
+        }
+
         // Try update existing item
         let [updateResult] = await db.query(
             `UPDATE order_item
              SET item_quantity = item_quantity + ?
              WHERE order_id = ?
              AND product_id = ?`,
-            [quantity || 1, orderId, productId]
+            [addQty, orderId, productId]
         );
 
         // If no row updated -> insert new item
@@ -377,7 +396,7 @@ app.post("/cart/:userId/:productId/:quantity", async (req, res) => {
             await db.query(
                 `INSERT INTO order_item (order_id, product_id, item_quantity)
                  VALUES (?, ?, ?)`,
-                [orderId, productId, quantity || 1]
+                [orderId, productId, addQty]
             );
         }
 
@@ -458,7 +477,7 @@ app.put("/cart/:userId/:productId/:quantity", async (req, res) => {
 
         const [[product]] = await db.query(`SELECT product_stock FROM product WHERE product_id = ?`, [productId]);
 
-        if (quantity <= 0 || quantity > product.product_stock) { return res.status(400).json({ message: "Invalid quantity" }); }
+        if (qty <= 0 || qty > product.product_stock) { return res.status(400).json({ message: `Insufficient stock. Only ${product.product_stock} items left in stock.` }); }
 
         let [updateResult] = await db.query(
             `UPDATE order_item
@@ -645,11 +664,12 @@ app.post("/quickbuy", async (req, res) => {
 
         const [[product]] = await db.query(`SELECT product_stock FROM product WHERE product_id = ?`, [productId]);
 
-        if (quantity <= 0 || quantity > product.product_stock) {
-            return res.status(400).json({ message: "Invalid quantity" });
+        const qty = Number(quantity) || 0;
+        if (qty <= 0 || qty > product.product_stock) {
+            return res.status(400).json({ message: `Insufficient stock. Only ${product.product_stock} items left in stock.` });
         }
 
-        await updateProductStock(productId, quantity);
+        await updateProductStock(productId, qty);
 
         const [order] = await db.query(`
             INSERT INTO orders (customer_id, order_date, order_status, transaction_type)
@@ -659,7 +679,7 @@ app.post("/quickbuy", async (req, res) => {
         await db.query(`
             INSERT INTO order_item (order_id, product_id, item_quantity, item_price)
             VALUES (?, ?, ?, (SELECT product_price FROM product WHERE product_id = ?))
-        `, [order.insertId, productId, quantity, productId]);
+        `, [order.insertId, productId, qty, productId]);
 
         if (gcashref) {
             await db.query(`

@@ -39,8 +39,12 @@ async function createDealCard(category, items=null, index=0) {
 		
 		const priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
 
+		const isOutOfStock = (product.product_stock === 0 || product.product_stock === null || product.product_stock === undefined);
+		const outOfStockClass = isOutOfStock ? 'out-of-stock' : '';
+		const outOfStockText = isOutOfStock ? '<div class="out-of-stock-text">OUT OF STOCK</div>' : '';
+
 		toAdd += 
-		`<div class="deal-card" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
+		`<div class="deal-card ${outOfStockClass}" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
 			<div class="deal-card-container ${noImageClass}" style="background-image: url('${imageSource}');">
 				<div class="deal-card-gradient">${gradientContent}</div>
 			</div>
@@ -48,7 +52,7 @@ async function createDealCard(category, items=null, index=0) {
 				<div class="detail-sample1">${product.product_name}</div>
 				<div class="detail-sample2">${product.product_description}</div>
 			</div>
-			<div class="deal-price">${priceText}</div>
+			<div class="deal-price">${priceText} ${outOfStockText}</div>
 			${discountText}
 		</div>`;
 	});
@@ -82,14 +86,18 @@ function createItemCard(products, category) {
 		
 		const priceText = product.product_discount > 0 ? `₱${formatPrice(product.product_price * (1 - product.product_discount / 100))} <s>₱${formatPrice(product.product_price)}</s>` : `₱${formatPrice(product.product_price)}`;
 
+		const isOutOfStock = (product.product_stock === 0 || product.product_stock === null || product.product_stock === undefined);
+		const outOfStockClass = isOutOfStock ? 'out-of-stock' : '';
+		const outOfStockText = isOutOfStock ? '<div class="out-of-stock-text">OUT OF STOCK</div>' : '';
+
 		toAdd += `
-		<div class="item-card" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
+		<div class="item-card ${outOfStockClass}" data-product-id="${product.product_id}" data-product-image="${imageSource}" data-product-price="${product.product_price}" data-product-discount="${product.product_discount || 0}" data-product-stock="${product.product_stock || 0}">
 			<div class="item-card-container ${noImageClass}" style="background-image: url('${imageSource}');">
 				<div class="item-card-gradient">${gradientContent}</div>
 			</div>
 			${discountText}
 			<div class="item-card-details">
-				<div class="item-price">${priceText}</div>
+				<div class="item-price">${priceText} ${outOfStockText}</div>
 				<div class="item-detail1">${product.product_name}</div>
 				<div class="item-detail2">${product.product_description}</div>
 			</div>
@@ -116,6 +124,7 @@ async function addToCartItem(productId, quantity = 1, options = {}) {
 
 	try {
 		const result = await addToCart(productId, quantity);
+		if (!result) return null;
 		alert(`Added ${quantity} item${quantity > 1 ? 's' : ''} to cart`);
 		if (options.closeModal) {
 			const overlay = document.querySelector('.card-modal-overlay');
@@ -308,7 +317,12 @@ else if (document.body.id === 'store-cart') {
 			const stock = Number(row.dataset.stock) || 0;
 			const warningEl = row.querySelector('.stock-warning');
 
-			if (stock > 0 && qty > stock) {
+			if (stock === 0) {
+				warningEl.textContent = `Out of stock.`;
+				warningEl.style.display = 'block';
+				qty = 0;
+				qtyInput.value = 0;
+			} else if (qty > stock) {
 				warningEl.textContent = `Only ${stock} in stock.`;
 				warningEl.style.display = 'block';
 				qty = stock;
@@ -399,6 +413,25 @@ else if (document.body.id === 'store-cart') {
 			alert('Your cart is empty.');
 			return;
 		}
+
+		// Check if any item is out of stock or quantity exceeds stock
+		const rows = getCartRows();
+		let hasStockIssue = false;
+		for (const row of rows) {
+			const qty = Number(row.querySelector('.cart-qty').value) || 0;
+			const stock = Number(row.dataset.stock) || 0;
+			if (stock === 0) {
+				alert(`"${row.querySelector('.product-name')?.textContent.trim()}" is out of stock. Please remove it from your cart before checking out.`);
+				hasStockIssue = true;
+				break;
+			} else if (qty > stock) {
+				alert(`"${row.querySelector('.product-name')?.textContent.trim()}" only has ${stock} in stock. Please reduce the quantity.`);
+				hasStockIssue = true;
+				break;
+			}
+		}
+
+		if (hasStockIssue) return;
 
 		// Open payment modal for cart checkout
 		openPaymentModalForCheckout('cartCheckout', {});
@@ -587,7 +620,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			selectedProductId = card.dataset.productId || null;
 			modalTitle.textContent = productName;
-			modalSubtitle.innerHTML = `₱${card.dataset.productDiscount > 0 ? `${discountedPrice} ${originalPrice}` : `${formatPrice(Number(card.dataset.productPrice) || 0)}`}`;
+
+			const stock = Number(card.dataset.productStock) || 0;
+			const quantityInput = cardModalOverlay.querySelector('#modal-quantity');
+			const addCartButton = cardModalOverlay.querySelector('.modal-action.add-to-cart');
+			const buyNowButton = cardModalOverlay.querySelector('.modal-action.buy-now');
+
+			if (stock === 0) {
+				modalSubtitle.innerHTML = `₱${card.dataset.productDiscount > 0 ? `${discountedPrice} ${originalPrice}` : `${formatPrice(Number(card.dataset.productPrice) || 0)}`} <span class="out-of-stock-text" style="margin-left:10px;">(Out of Stock)</span>`;
+				
+				if (quantityInput) {
+					quantityInput.value = 0;
+					quantityInput.min = 0;
+					quantityInput.disabled = true;
+				}
+				if (addCartButton) {
+					addCartButton.disabled = true;
+					addCartButton.textContent = "Out of Stock";
+					addCartButton.style.opacity = "0.5";
+					addCartButton.style.cursor = "not-allowed";
+				}
+				if (buyNowButton) {
+					buyNowButton.disabled = true;
+					buyNowButton.textContent = "Out of Stock";
+					buyNowButton.style.opacity = "0.5";
+					buyNowButton.style.cursor = "not-allowed";
+				}
+			} else {
+				modalSubtitle.innerHTML = `₱${card.dataset.productDiscount > 0 ? `${discountedPrice} ${originalPrice}` : `${formatPrice(Number(card.dataset.productPrice) || 0)}`}`;
+				
+				if (quantityInput) {
+					quantityInput.value = 1;
+					quantityInput.min = 1;
+					quantityInput.disabled = false;
+				}
+				if (addCartButton) {
+					addCartButton.disabled = false;
+					addCartButton.textContent = "Add to cart";
+					addCartButton.style.opacity = "";
+					addCartButton.style.cursor = "";
+				}
+				if (buyNowButton) {
+					buyNowButton.disabled = false;
+					buyNowButton.textContent = "Buy now";
+					buyNowButton.style.opacity = "";
+					buyNowButton.style.cursor = "";
+				}
+			}
+
 			modalDescription.textContent = productDescription;
 			modalImage.src = imageSource;
 			cardModalOverlay.hidden = false;
@@ -597,6 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const addCartButton = cardModalOverlay.querySelector('.modal-action.add-to-cart');
 		if (addCartButton) {
 			addCartButton.addEventListener('click', async () => {
+				if (addCartButton.disabled) return;
 				if (selectedProductId) {
 					const quantityInput = cardModalOverlay.querySelector('#modal-quantity');
 					const quantity = parseInt(quantityInput?.value) || 1;
@@ -612,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const buyNowButton = cardModalOverlay.querySelector('.modal-action.buy-now');
 		if (buyNowButton) {
 			buyNowButton.addEventListener('click', async () => {
+				if (buyNowButton.disabled) return;
 				if (!selectedProductId) {
 					alert('No product selected to buy now.');
 					return;
