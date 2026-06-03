@@ -1014,7 +1014,7 @@ app.get("/admin/sales", async (req, res) => {
     try {
         // Aggregated list for admin view
         const [rows] = await db.query(`
-      SELECT o.order_id, o.order_date, o.order_status, c.customer_name,
+      SELECT o.order_id, o.order_date, o.order_status, o.transaction_type, c.customer_name,
                          GROUP_CONCAT(CONCAT(p.product_name, ' x', oi.item_quantity)
                              ORDER BY p.product_name SEPARATOR ' | ') AS product_list,
                          SUM(oi.item_quantity) AS items,

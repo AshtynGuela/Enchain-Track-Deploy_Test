@@ -1122,7 +1122,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadSales() {
   const rows = await fetchJson("/admin/sales");
-  document.getElementById("salesBody").innerHTML = rows.map(row => `
+  document.getElementById("salesBody").innerHTML = rows.map(row => {
+    const paymentType = String(row.transaction_type || '').toLowerCase();
+    const paymentBadge = paymentType === 'g'
+      ? '<span class="payment-badge payment-gcash">GCash</span>'
+      : '<span class="payment-badge payment-onhand">On Hand</span>';
+    return `
     <tr class="admin-order-row" data-order-id="${row.order_id}" data-entity="orders" data-id="${row.order_id}">
       <td>${row.order_id}</td>
       <td>${formatDateShort(row.order_date)}</td>
@@ -1132,6 +1137,7 @@ async function loadSales() {
       <td class="text-right">${formatCurrency(row.gross)}</td>
       <td class="text-right">${formatCurrency(row.discount)}</td>
       <td class="text-right">${formatCurrency(row.total)}</td>
+      <td>${paymentBadge}</td>
       <td>
         <select class="order-status" data-order-id="${row.order_id}" data-edit-control="order-status" data-original-value="${row.order_status}" ${editModeEnabled ? "" : "disabled"}>
           <option value="pending" ${row.order_status === 'pending' ? 'selected' : ''}>Pending</option>
@@ -1140,7 +1146,8 @@ async function loadSales() {
         </select>
       </td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
   bindOrderStatusEvents();
 }
 
