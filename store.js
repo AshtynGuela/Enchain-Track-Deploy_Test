@@ -234,9 +234,11 @@ else if (document.body.id === 'store-browse') {
 			});
 		}
 
+		const categoryObj = categories.find((cat) => cat.name === currentBrowseCategory) || categories[0];
+
 		const dealCards = products.slice(0, 3);
-		createDealCard(currentBrowseCategory, dealCards);
-		createItemCard(products.slice(3), {name: currentBrowseCategory});
+		await createDealCard(categoryObj, dealCards, 0);
+		createItemCard(products.slice(3), categoryObj);
 		applyBrowseCategoryMarker(currentBrowseCategory);
 	}
 

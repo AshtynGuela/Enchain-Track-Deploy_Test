@@ -239,14 +239,15 @@ app.get("/products", async (req, res) => {
     }
 });
 
-// get products ordered based on total orders/sales done in past two months
+// get products ordered based on total orders/sales done (all products shown, sorted by popularity)
 app.get("/products/popular", async (req, res) => {
     try {
         const [products] = await db.query(`
-            SELECT  p.*
-            FROM order_item AS oi JOIN product AS p ON p.product_id = oi.product_id
+            SELECT p.*, COALESCE(SUM(oi.item_quantity), 0) AS total_sold
+            FROM product AS p
+            LEFT JOIN order_item AS oi ON p.product_id = oi.product_id
 			GROUP BY p.product_id
-			ORDER BY p.product_discount DESC, SUM(oi.item_quantity) DESC;
+			ORDER BY p.product_discount DESC, total_sold DESC, p.product_name ASC;
         `);
 
         res.json(products);
